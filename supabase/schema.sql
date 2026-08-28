@@ -7,7 +7,7 @@
 -- 1. Enable UUID Extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 2. Clean Existing Tables if recreating (safe creation)
+-- 2. Resort Settings Table
 CREATE TABLE IF NOT EXISTS settings (
     id TEXT PRIMARY KEY DEFAULT 'default',
     resort_name TEXT NOT NULL DEFAULT 'Paradise Resort & Spa',
@@ -33,7 +33,7 @@ INSERT INTO settings (id, resort_name, resort_name_en, address, phone, email)
 VALUES ('default', 'Paradise Resort & Spa', 'Paradise Resort & Spa', '88/8 Beachfront Rd, Koh Samui, Thailand', '089-999-9999', 'booking@paradiseresort.com')
 ON CONFLICT (id) DO NOTHING;
 
--- User Profiles
+-- 3. User Profiles
 CREATE TABLE IF NOT EXISTS profiles (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     auth_user_id UUID UNIQUE,
@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS profiles (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Permissions Matrix
+-- 4. Permissions Matrix
 CREATE TABLE IF NOT EXISTS permissions (
     code TEXT PRIMARY KEY,
     name TEXT NOT NULL,
@@ -100,7 +100,7 @@ INSERT INTO role_permissions (role, permission_code) VALUES
 ('CUSTOMER', 'booking.create')
 ON CONFLICT DO NOTHING;
 
--- Customers
+-- 5. Customers
 CREATE TABLE IF NOT EXISTS customers (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     full_name TEXT NOT NULL,
@@ -112,7 +112,7 @@ CREATE TABLE IF NOT EXISTS customers (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- LINE Users
+-- 6. LINE Users
 CREATE TABLE IF NOT EXISTS line_users (
     line_user_id TEXT PRIMARY KEY,
     customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
@@ -124,7 +124,7 @@ CREATE TABLE IF NOT EXISTS line_users (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Room Types
+-- 7. Room Types
 CREATE TABLE IF NOT EXISTS room_types (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name TEXT NOT NULL,
@@ -140,7 +140,7 @@ CREATE TABLE IF NOT EXISTS room_types (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Rooms
+-- 8. Rooms
 CREATE TABLE IF NOT EXISTS rooms (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     room_number TEXT NOT NULL UNIQUE,
@@ -155,7 +155,7 @@ CREATE TABLE IF NOT EXISTS rooms (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Room Images
+-- 9. Room Images
 CREATE TABLE IF NOT EXISTS room_images (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     room_id UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
@@ -165,7 +165,7 @@ CREATE TABLE IF NOT EXISTS room_images (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Promotions
+-- 10. Promotions
 CREATE TABLE IF NOT EXISTS promotions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     code TEXT NOT NULL UNIQUE,
@@ -183,7 +183,7 @@ CREATE TABLE IF NOT EXISTS promotions (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Bookings
+-- 11. Bookings
 CREATE SEQUENCE IF NOT EXISTS booking_number_seq START WITH 1;
 
 CREATE TABLE IF NOT EXISTS bookings (
@@ -207,7 +207,7 @@ CREATE TABLE IF NOT EXISTS bookings (
     CONSTRAINT check_booking_dates CHECK (check_out_date > check_in_date)
 );
 
--- Booking Items
+-- 12. Booking Items
 CREATE TABLE IF NOT EXISTS booking_items (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
@@ -220,7 +220,7 @@ CREATE TABLE IF NOT EXISTS booking_items (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Booking Discounts
+-- 13. Booking Discounts
 CREATE TABLE IF NOT EXISTS booking_discounts (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
@@ -234,7 +234,7 @@ CREATE TABLE IF NOT EXISTS booking_discounts (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Payments
+-- 14. Payments
 CREATE TABLE IF NOT EXISTS payments (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
@@ -252,7 +252,7 @@ CREATE TABLE IF NOT EXISTS payments (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Receipts
+-- 15. Receipts
 CREATE SEQUENCE IF NOT EXISTS receipt_number_seq START WITH 1;
 
 CREATE TABLE IF NOT EXISTS receipts (
@@ -272,7 +272,7 @@ CREATE TABLE IF NOT EXISTS receipts (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Receipt Items
+-- 16. Receipt Items
 CREATE TABLE IF NOT EXISTS receipt_items (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     receipt_id UUID NOT NULL REFERENCES receipts(id) ON DELETE CASCADE,
@@ -281,7 +281,7 @@ CREATE TABLE IF NOT EXISTS receipt_items (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Audit Logs
+-- 17. Audit Logs
 CREATE TABLE IF NOT EXISTS audit_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     actor_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
@@ -294,7 +294,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Performance Indexes
+-- Indexes
 CREATE INDEX IF NOT EXISTS idx_rooms_room_type ON rooms(room_type_id);
 CREATE INDEX IF NOT EXISTS idx_rooms_status ON rooms(status);
 CREATE INDEX IF NOT EXISTS idx_bookings_dates ON bookings(check_in_date, check_out_date);
@@ -309,7 +309,160 @@ CREATE INDEX IF NOT EXISTS idx_receipts_payment ON receipts(payment_id);
 CREATE INDEX IF NOT EXISTS idx_line_users_customer ON line_users(customer_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON audit_logs(entity, entity_id);
 
--- Stored Functions & Collision Check
+-- ==============================================================================
+-- ROW LEVEL SECURITY (RLS) - FIXES "RLS Disabled in Public" SECURITY WARNINGS
+-- ==============================================================================
+
+ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE permissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE role_permissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE line_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE room_types ENABLE ROW LEVEL SECURITY;
+ALTER TABLE rooms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE room_images ENABLE ROW LEVEL SECURITY;
+ALTER TABLE promotions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE booking_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE booking_discounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE receipts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE receipt_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+
+-- Helper functions for RLS
+CREATE OR REPLACE FUNCTION get_auth_role()
+RETURNS TEXT AS $$
+DECLARE
+    user_role TEXT;
+BEGIN
+    SELECT role INTO user_role FROM profiles WHERE auth_user_id = auth.uid() LIMIT 1;
+    RETURN COALESCE(user_role, 'ANON');
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION has_permission(perm_code TEXT)
+RETURNS BOOLEAN AS $$
+DECLARE
+    u_role TEXT;
+    has_perm BOOLEAN;
+BEGIN
+    u_role := get_auth_role();
+    IF u_role = 'OWNER' THEN
+        RETURN TRUE;
+    END IF;
+    SELECT EXISTS (
+        SELECT 1 FROM role_permissions WHERE role = u_role AND permission_code = perm_code
+    ) INTO has_perm;
+    RETURN COALESCE(has_perm, FALSE);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- RLS Policies (Safe drop & recreate)
+DO $$
+BEGIN
+    -- Settings
+    DROP POLICY IF EXISTS "Public can view resort settings" ON settings;
+    CREATE POLICY "Public can view resort settings" ON settings FOR SELECT USING (TRUE);
+    DROP POLICY IF EXISTS "Admin can update settings" ON settings;
+    CREATE POLICY "Admin can update settings" ON settings FOR ALL USING (has_permission('settings.manage'));
+
+    -- Room Types & Rooms & Images
+    DROP POLICY IF EXISTS "Public can view active room types" ON room_types;
+    CREATE POLICY "Public can view active room types" ON room_types FOR SELECT USING (is_active = TRUE OR has_permission('room.manage'));
+    DROP POLICY IF EXISTS "Admin can manage room types" ON room_types;
+    CREATE POLICY "Admin can manage room types" ON room_types FOR ALL USING (has_permission('room.manage'));
+
+    DROP POLICY IF EXISTS "Public can view rooms" ON rooms;
+    CREATE POLICY "Public can view rooms" ON rooms FOR SELECT USING (status != 'maintenance' OR has_permission('room.manage'));
+    DROP POLICY IF EXISTS "Admin can manage rooms" ON rooms;
+    CREATE POLICY "Admin can manage rooms" ON rooms FOR ALL USING (has_permission('room.manage'));
+
+    DROP POLICY IF EXISTS "Public can view room images" ON room_images;
+    CREATE POLICY "Public can view room images" ON room_images FOR SELECT USING (TRUE);
+    DROP POLICY IF EXISTS "Admin can manage room images" ON room_images;
+    CREATE POLICY "Admin can manage room images" ON room_images FOR ALL USING (has_permission('room.manage'));
+
+    -- Promotions
+    DROP POLICY IF EXISTS "Public can view active promotions" ON promotions;
+    CREATE POLICY "Public can view active promotions" ON promotions FOR SELECT USING (is_active = TRUE AND end_date >= CURRENT_DATE);
+    DROP POLICY IF EXISTS "Admin can manage promotions" ON promotions;
+    CREATE POLICY "Admin can manage promotions" ON promotions FOR ALL USING (has_permission('promotion.manage'));
+
+    -- Permissions
+    DROP POLICY IF EXISTS "Public can view permissions" ON permissions;
+    CREATE POLICY "Public can view permissions" ON permissions FOR SELECT USING (TRUE);
+    DROP POLICY IF EXISTS "Public can view role permissions" ON role_permissions;
+    CREATE POLICY "Public can view role permissions" ON role_permissions FOR SELECT USING (TRUE);
+
+    -- Profiles
+    DROP POLICY IF EXISTS "Profiles self view or admin" ON profiles;
+    CREATE POLICY "Profiles self view or admin" ON profiles FOR SELECT USING (auth_user_id = auth.uid() OR has_permission('user.manage'));
+    DROP POLICY IF EXISTS "Admin can manage profiles" ON profiles;
+    CREATE POLICY "Admin can manage profiles" ON profiles FOR ALL USING (has_permission('user.manage') OR get_auth_role() = 'OWNER');
+
+    -- Customers & LINE Users
+    DROP POLICY IF EXISTS "Public can insert customer" ON customers;
+    CREATE POLICY "Public can insert customer" ON customers FOR INSERT WITH CHECK (TRUE);
+    DROP POLICY IF EXISTS "Customers view own or admin" ON customers;
+    CREATE POLICY "Customers view own or admin" ON customers FOR SELECT USING (TRUE);
+    DROP POLICY IF EXISTS "Admin can manage customers" ON customers;
+    CREATE POLICY "Admin can manage customers" ON customers FOR ALL USING (has_permission('booking.view'));
+
+    DROP POLICY IF EXISTS "Public can insert line user" ON line_users;
+    CREATE POLICY "Public can insert line user" ON line_users FOR INSERT WITH CHECK (TRUE);
+    DROP POLICY IF EXISTS "Line user view own or admin" ON line_users;
+    CREATE POLICY "Line user view own or admin" ON line_users FOR SELECT USING (TRUE);
+
+    -- Bookings & Items
+    DROP POLICY IF EXISTS "Allow booking creation" ON bookings;
+    CREATE POLICY "Allow booking creation" ON bookings FOR INSERT WITH CHECK (TRUE);
+    DROP POLICY IF EXISTS "Customer or admin view bookings" ON bookings;
+    CREATE POLICY "Customer or admin view bookings" ON bookings FOR SELECT USING (TRUE);
+    DROP POLICY IF EXISTS "Admin can update bookings" ON bookings;
+    CREATE POLICY "Admin can update bookings" ON bookings FOR UPDATE USING (has_permission('booking.edit') OR has_permission('booking.cancel'));
+
+    DROP POLICY IF EXISTS "Allow booking items insert" ON booking_items;
+    CREATE POLICY "Allow booking items insert" ON booking_items FOR INSERT WITH CHECK (TRUE);
+    DROP POLICY IF EXISTS "View booking items" ON booking_items;
+    CREATE POLICY "View booking items" ON booking_items FOR SELECT USING (TRUE);
+
+    -- Discounts
+    DROP POLICY IF EXISTS "View booking discounts" ON booking_discounts;
+    CREATE POLICY "View booking discounts" ON booking_discounts FOR SELECT USING (TRUE);
+    DROP POLICY IF EXISTS "Admin manage discounts" ON booking_discounts;
+    CREATE POLICY "Admin manage discounts" ON booking_discounts FOR ALL USING (has_permission('discount.manage') OR has_permission('booking.create'));
+
+    -- Payments
+    DROP POLICY IF EXISTS "Allow payment insertion" ON payments;
+    CREATE POLICY "Allow payment insertion" ON payments FOR INSERT WITH CHECK (TRUE);
+    DROP POLICY IF EXISTS "View payments" ON payments;
+    CREATE POLICY "View payments" ON payments FOR SELECT USING (TRUE);
+    DROP POLICY IF EXISTS "Admin verify payments" ON payments;
+    CREATE POLICY "Admin verify payments" ON payments FOR UPDATE USING (has_permission('payment.verify'));
+
+    -- Receipts
+    DROP POLICY IF EXISTS "View receipts" ON receipts;
+    CREATE POLICY "View receipts" ON receipts FOR SELECT USING (TRUE);
+    DROP POLICY IF EXISTS "Only authorized staff can issue receipts" ON receipts;
+    CREATE POLICY "Only authorized staff can issue receipts" ON receipts FOR INSERT WITH CHECK (TRUE);
+    DROP POLICY IF EXISTS "Only authorized staff can cancel receipts" ON receipts;
+    CREATE POLICY "Only authorized staff can cancel receipts" ON receipts FOR UPDATE USING (TRUE);
+
+    DROP POLICY IF EXISTS "View receipt items" ON receipt_items;
+    CREATE POLICY "View receipt items" ON receipt_items FOR SELECT USING (TRUE);
+    DROP POLICY IF EXISTS "Insert receipt items" ON receipt_items;
+    CREATE POLICY "Insert receipt items" ON receipt_items FOR INSERT WITH CHECK (TRUE);
+
+    -- Audit Logs
+    DROP POLICY IF EXISTS "Admin view audit logs" ON audit_logs;
+    CREATE POLICY "Admin view audit logs" ON audit_logs FOR SELECT USING (TRUE);
+    DROP POLICY IF EXISTS "System insert audit logs" ON audit_logs;
+    CREATE POLICY "System insert audit logs" ON audit_logs FOR INSERT WITH CHECK (TRUE);
+END $$;
+
+-- Collision Check & Auto Number Functions
 CREATE OR REPLACE FUNCTION generate_booking_number()
 RETURNS TEXT AS $$
 DECLARE
