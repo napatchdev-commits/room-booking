@@ -9,44 +9,40 @@ import { Promotion, Room } from '@/types/database';
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const checkIn = searchParams.get('checkIn');
-    const checkOut = searchParams.get('checkOut');
+    const checkIn = searchParams.get('checkIn') || '';
+    const checkOut = searchParams.get('checkOut') || '';
     const guestsParam = searchParams.get('guests');
     const guests = guestsParam ? parseInt(guestsParam, 10) : 1;
     const roomTypeId = searchParams.get('roomTypeId');
 
-    if (!checkIn || !checkOut) {
-      return NextResponse.json({ error: 'checkIn and checkOut dates are required' }, { status: 400 });
-    }
-
-    const nights = calculateNights(checkIn, checkOut);
-    if (nights <= 0) {
-      return NextResponse.json({ error: 'Check-out date must be after Check-in date' }, { status: 400 });
-    }
+    const nights = checkIn && checkOut ? calculateNights(checkIn, checkOut) : 1;
+    const validNights = Math.max(1, nights);
 
     const supabase = getAdminClient();
 
     // 1. Find conflicting bookings
     const bookedRoomIds = new Set<string>();
-    try {
-      const { data: conflictingBookings } = await supabase
-        .from('bookings')
-        .select('id, booking_items(room_id)')
-        .in('status', ['PENDING', 'CONFIRMED', 'CHECKED_IN'])
-        .lt('check_in_date', checkOut)
-        .gt('check_out_date', checkIn);
+    if (checkIn && checkOut) {
+      try {
+        const { data: conflictingBookings } = await supabase
+          .from('bookings')
+          .select('id, booking_items(room_id)')
+          .in('status', ['PENDING', 'CONFIRMED', 'CHECKED_IN'])
+          .lt('check_in_date', checkOut)
+          .gt('check_out_date', checkIn);
 
-      conflictingBookings?.forEach((b: any) => {
-        if (Array.isArray(b.booking_items)) {
-          b.booking_items.forEach((item: any) => {
-            if (item?.room_id) bookedRoomIds.add(item.room_id);
-          });
-        } else if (b.booking_items?.room_id) {
-          bookedRoomIds.add(b.booking_items.room_id);
-        }
-      });
-    } catch (bErr) {
-      console.warn('Could not query conflicting bookings, proceeding with room list:', bErr);
+        conflictingBookings?.forEach((b: any) => {
+          if (Array.isArray(b.booking_items)) {
+            b.booking_items.forEach((item: any) => {
+              if (item?.room_id) bookedRoomIds.add(String(item.room_id));
+            });
+          } else if (b.booking_items?.room_id) {
+            bookedRoomIds.add(String(b.booking_items.room_id));
+          }
+        });
+      } catch (bErr) {
+        console.warn('Could not query conflicting bookings:', bErr);
+      }
     }
 
     // 2. Fetch all active promotions
@@ -55,79 +51,79 @@ export async function GET(req: NextRequest) {
       const { data: promoData } = await supabase
         .from('promotions')
         .select('*')
-        .eq('is_active', true)
-        .lte('start_date', checkIn)
-        .gte('end_date', checkIn);
+        .eq('is_active', true);
 
       if (promoData) promotions = promoData as Promotion[];
     } catch {
       // ignore
     }
 
-    // 3. Fetch rooms with capacity check
-    let roomQuery = supabase
+    // 3. Fetch all rooms
+    const { data: allRooms, error: roomErr } = await supabase
       .from('rooms')
       .select('*, room_type:room_types(*), room_images(*)')
-      .order('price_per_night', { ascending: true });
-
-    // Filter out maintenance rooms
-    roomQuery = roomQuery.neq('status', 'maintenance');
-
-    // Filter by capacity if specified
-    if (guests && guests > 0) {
-      roomQuery = roomQuery.gte('capacity', guests);
-    }
-
-    // Filter by room type if specified
-    if (roomTypeId) {
-      roomQuery = roomQuery.eq('room_type_id', roomTypeId);
-    }
-
-    const { data: rooms, error: roomErr } = await roomQuery;
+      .order('room_number', { ascending: true });
 
     if (roomErr) {
       console.error('Error fetching rooms:', roomErr);
       return NextResponse.json({ error: roomErr.message || 'Failed to fetch rooms' }, { status: 500 });
     }
 
-    // Filter out booked rooms
-    const availableRooms = (rooms || []).filter((room) => !bookedRoomIds.has(room.id));
+    // 4. Filter in JavaScript for bulletproof reliability
+    const availableRooms = (allRooms || []).filter((room: any) => {
+      // Filter out maintenance
+      if (room.status === 'maintenance') return false;
 
-    // Calculate price breakdown with promotions for each room
-    const roomsWithPricing = availableRooms.map((room) => {
+      // Filter by capacity (default to 2 if missing, allow if capacity >= requested guests)
+      const roomCapacity = Number(room.capacity || 2);
+      if (guests && roomCapacity < guests) return false;
+
+      // Filter by roomTypeId if specified
+      if (roomTypeId && roomTypeId !== 'ALL' && room.room_type_id !== roomTypeId) return false;
+
+      // Filter out booked rooms
+      if (bookedRoomIds.has(String(room.id))) return false;
+
+      return true;
+    });
+
+    // 5. Calculate price breakdown with promotions for each room
+    const roomsWithPricing = availableRooms.map((room: any) => {
       const pricePerNight = Number(room.price_per_night || 0);
-      const subtotal = pricePerNight * nights;
+      const subtotal = pricePerNight * validNights;
 
       // Find best applicable promotion
       let bestDiscount = 0;
       let appliedPromo: Promotion | null = null;
 
-      promotions.forEach((promo) => {
-        try {
-          const result = calculatePromotionDiscount(
-            subtotal,
-            nights,
-            checkIn,
-            checkOut,
-            room as unknown as Room,
-            promo
-          );
-          if (result.applied && result.discountAmount > bestDiscount) {
-            bestDiscount = result.discountAmount;
-            appliedPromo = promo;
+      if (checkIn && checkOut) {
+        promotions.forEach((promo) => {
+          try {
+            const result = calculatePromotionDiscount(
+              subtotal,
+              validNights,
+              checkIn,
+              checkOut,
+              room as unknown as Room,
+              promo
+            );
+            if (result.applied && result.discountAmount > bestDiscount) {
+              bestDiscount = result.discountAmount;
+              appliedPromo = promo;
+            }
+          } catch {
+            // ignore
           }
-        } catch {
-          // ignore
-        }
-      });
+        });
+      }
 
       const netTotal = Math.max(0, subtotal - bestDiscount);
-      const discountedPricePerNight = Math.round((netTotal / nights) * 100) / 100;
+      const discountedPricePerNight = Math.round((netTotal / validNights) * 100) / 100;
 
       return {
         ...room,
         pricing: {
-          nights,
+          nights: validNights,
           originalPricePerNight: pricePerNight,
           originalSubtotal: subtotal,
           discountAmount: bestDiscount,
@@ -143,7 +139,7 @@ export async function GET(req: NextRequest) {
       success: true,
       checkIn,
       checkOut,
-      nights,
+      nights: validNights,
       guests,
       count: roomsWithPricing.length,
       rooms: roomsWithPricing,
