@@ -11,7 +11,8 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const checkIn = searchParams.get('checkIn');
     const checkOut = searchParams.get('checkOut');
-    const guests = parseInt(searchParams.get('guests') || '1', 10);
+    const guestsParam = searchParams.get('guests');
+    const guests = guestsParam ? parseInt(guestsParam, 10) : 1;
     const roomTypeId = searchParams.get('roomTypeId');
 
     if (!checkIn || !checkOut) {
@@ -26,50 +27,67 @@ export async function GET(req: NextRequest) {
     const supabase = getAdminClient();
 
     // 1. Find conflicting bookings
-    const { data: conflictingBookings, error: bookingErr } = await supabase
-      .from('bookings')
-      .select('id, booking_items(room_id)')
-      .in('status', ['PENDING', 'CONFIRMED', 'CHECKED_IN'])
-      .lt('check_in_date', checkOut)
-      .gt('check_out_date', checkIn);
+    const bookedRoomIds = new Set<string>();
+    try {
+      const { data: conflictingBookings } = await supabase
+        .from('bookings')
+        .select('id, booking_items(room_id)')
+        .in('status', ['PENDING', 'CONFIRMED', 'CHECKED_IN'])
+        .lt('check_in_date', checkOut)
+        .gt('check_out_date', checkIn);
 
-    if (bookingErr) {
-      console.error('Error fetching conflicting bookings:', bookingErr);
-      return NextResponse.json({ error: 'Database query failed' }, { status: 500 });
+      conflictingBookings?.forEach((b: any) => {
+        if (Array.isArray(b.booking_items)) {
+          b.booking_items.forEach((item: any) => {
+            if (item?.room_id) bookedRoomIds.add(item.room_id);
+          });
+        } else if (b.booking_items?.room_id) {
+          bookedRoomIds.add(b.booking_items.room_id);
+        }
+      });
+    } catch (bErr) {
+      console.warn('Could not query conflicting bookings, proceeding with room list:', bErr);
     }
 
-    // Collect all booked room IDs
-    const bookedRoomIds = new Set<string>();
-    conflictingBookings?.forEach((b) => {
-      (b.booking_items as unknown as { room_id: string }[])?.forEach((item) => {
-        if (item.room_id) bookedRoomIds.add(item.room_id);
-      });
-    });
-
     // 2. Fetch all active promotions
-    const { data: promotions } = await supabase
-      .from('promotions')
-      .select('*')
-      .eq('is_active', true)
-      .lte('start_date', checkIn)
-      .gte('end_date', checkIn);
+    let promotions: Promotion[] = [];
+    try {
+      const { data: promoData } = await supabase
+        .from('promotions')
+        .select('*')
+        .eq('is_active', true)
+        .lte('start_date', checkIn)
+        .gte('end_date', checkIn);
 
-    // 3. Fetch rooms that are available
+      if (promoData) promotions = promoData as Promotion[];
+    } catch {
+      // ignore
+    }
+
+    // 3. Fetch rooms with capacity check
     let roomQuery = supabase
       .from('rooms')
       .select('*, room_type:room_types(*), room_images(*)')
-      .neq('status', 'maintenance')
-      .gte('capacity', guests);
+      .order('price_per_night', { ascending: true });
 
+    // Filter out maintenance rooms
+    roomQuery = roomQuery.neq('status', 'maintenance');
+
+    // Filter by capacity if specified
+    if (guests && guests > 0) {
+      roomQuery = roomQuery.gte('capacity', guests);
+    }
+
+    // Filter by room type if specified
     if (roomTypeId) {
       roomQuery = roomQuery.eq('room_type_id', roomTypeId);
     }
 
-    const { data: rooms, error: roomErr } = await roomQuery.order('price_per_night', { ascending: true });
+    const { data: rooms, error: roomErr } = await roomQuery;
 
     if (roomErr) {
       console.error('Error fetching rooms:', roomErr);
-      return NextResponse.json({ error: 'Failed to fetch rooms' }, { status: 500 });
+      return NextResponse.json({ error: roomErr.message || 'Failed to fetch rooms' }, { status: 500 });
     }
 
     // Filter out booked rooms
@@ -77,25 +95,29 @@ export async function GET(req: NextRequest) {
 
     // Calculate price breakdown with promotions for each room
     const roomsWithPricing = availableRooms.map((room) => {
-      const pricePerNight = Number(room.price_per_night);
+      const pricePerNight = Number(room.price_per_night || 0);
       const subtotal = pricePerNight * nights;
 
       // Find best applicable promotion
       let bestDiscount = 0;
       let appliedPromo: Promotion | null = null;
 
-      (promotions || []).forEach((promo) => {
-        const result = calculatePromotionDiscount(
-          subtotal,
-          nights,
-          checkIn,
-          checkOut,
-          room as unknown as Room,
-          promo as unknown as Promotion
-        );
-        if (result.applied && result.discountAmount > bestDiscount) {
-          bestDiscount = result.discountAmount;
-          appliedPromo = promo as unknown as Promotion;
+      promotions.forEach((promo) => {
+        try {
+          const result = calculatePromotionDiscount(
+            subtotal,
+            nights,
+            checkIn,
+            checkOut,
+            room as unknown as Room,
+            promo
+          );
+          if (result.applied && result.discountAmount > bestDiscount) {
+            bestDiscount = result.discountAmount;
+            appliedPromo = promo;
+          }
+        } catch {
+          // ignore
         }
       });
 
@@ -126,8 +148,8 @@ export async function GET(req: NextRequest) {
       count: roomsWithPricing.length,
       rooms: roomsWithPricing,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Available rooms error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
 }
