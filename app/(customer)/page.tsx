@@ -176,10 +176,10 @@ function HomeContent() {
             </p>
             <div className="pt-2">
               <Link
-                href="/admin/rooms"
-                className="inline-flex items-center text-xs font-semibold text-resort-600 hover:text-resort-700 bg-resort-50 px-3.5 py-2 rounded-lg border border-resort-200"
+                href="/contact"
+                className="inline-flex items-center text-xs font-semibold text-resort-700 hover:text-resort-800 bg-resort-50 px-4 py-2 rounded-xl border border-resort-200"
               >
-                + จัดการเพิ่มห้องพัก (Admin Portal)
+                ติดต่อสอบถามเจ้าหน้าที่ &rarr;
               </Link>
             </div>
           </div>

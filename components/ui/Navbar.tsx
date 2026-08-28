@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useLiff } from '@/components/providers/LiffProvider';
 import { Settings } from '@/types/database';
-import { Building2, Calendar, CreditCard, Shield, User, Menu, X } from 'lucide-react';
+import { Building2, User, Menu, X } from 'lucide-react';
 
 export function Navbar() {
   const pathname = usePathname();
@@ -46,12 +46,12 @@ export function Navbar() {
                 {settings?.resort_name || 'Paradise Resort'}
               </span>
               <span className="text-[11px] text-resort-600 font-medium block">
-                LINE LIFF Booking System
+                {settings?.resort_name_en || 'Resort Room Booking'}
               </span>
             </div>
           </Link>
 
-          {/* Desktop Nav */}
+          {/* Desktop Nav for Customers */}
           <nav className="hidden md:flex items-center space-x-1 lg:space-x-2">
             {navLinks.map((link) => {
               const isActive = pathname === link.href;
@@ -71,17 +71,8 @@ export function Navbar() {
             })}
           </nav>
 
-          {/* Right Actions: User / Admin Button */}
+          {/* Right Actions: LINE Profile / Login */}
           <div className="flex items-center space-x-2">
-            <Link
-              href="/admin/dashboard"
-              className="hidden sm:inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors border border-slate-200"
-            >
-              <Shield className="w-3.5 h-3.5 text-resort-600" />
-              <span>Admin Portal</span>
-            </Link>
-
-            {/* Profile Avatar / Login */}
             {profile ? (
               <div className="flex items-center space-x-2 bg-slate-50 border border-slate-200 rounded-full py-1 px-2.5">
                 {profile.pictureUrl ? (
@@ -102,10 +93,10 @@ export function Navbar() {
             ) : (
               <button
                 onClick={login}
-                className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-full text-xs font-medium bg-[#06C755] text-white hover:bg-[#05b34c] shadow-sm transition-colors"
+                className="inline-flex items-center space-x-1 px-3.5 py-2 rounded-full text-xs font-semibold bg-[#06C755] text-white hover:bg-[#05b34c] shadow-sm transition-colors"
               >
                 <User className="w-3.5 h-3.5" />
-                <span>LINE Login</span>
+                <span>เข้าสู่ระบบ LINE</span>
               </button>
             )}
 
@@ -134,16 +125,6 @@ export function Navbar() {
               {link.label}
             </Link>
           ))}
-          <div className="pt-2 border-t border-slate-100">
-            <Link
-              href="/admin/dashboard"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium text-resort-700 bg-resort-50"
-            >
-              <Shield className="w-4 h-4" />
-              <span>Admin Management Portal</span>
-            </Link>
-          </div>
         </div>
       )}
     </header>
