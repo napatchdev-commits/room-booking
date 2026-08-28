@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { Room, Promotion } from '@/types/database';
-import { formatCurrency } from '@/lib/formatters';
-import { Users, Wifi, Wind, Coffee, Sparkles, Bed, ChevronRight, CheckCircle2, ChevronLeft } from 'lucide-react';
+import { formatCurrency, calculateNights } from '@/lib/formatters';
+import { Users, Wifi, Wind, Coffee, Sparkles, ChevronRight, CheckCircle2, ChevronLeft } from 'lucide-react';
 
 interface RoomWithPricing extends Room {
   pricing?: {
@@ -36,11 +36,12 @@ export function RoomCard({ room, checkIn, checkOut, guests }: RoomCardProps) {
         'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&auto=format&fit=crop&q=80',
       ];
 
+  const originalRate = Number(room.price_per_night || 0);
+  const nights = Math.max(1, calculateNights(checkIn, checkOut));
   const pricing = room.pricing;
-  const originalRate = Number(room.price_per_night);
+
   const discountedRate = pricing?.hasDiscount ? pricing.discountedPricePerNight : originalRate;
-  const nights = pricing?.nights || 1;
-  const totalAmount = pricing ? pricing.netTotal : originalRate * nights;
+  const totalAmount = pricing?.hasDiscount ? pricing.netTotal : originalRate * nights;
 
   const nextImage = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -164,7 +165,7 @@ export function RoomCard({ room, checkIn, checkOut, guests }: RoomCardProps) {
         {/* Pricing & Booking Footer (Agoda Style) */}
         <div className="mt-4 pt-3.5 border-t border-slate-100 flex flex-col sm:flex-row items-end sm:items-center justify-between gap-3">
           <div>
-            <div className="text-[11px] text-slate-400 font-medium">ราคาสำหรับ {nights} คืน</div>
+            <div className="text-[11px] text-slate-400 font-medium">ราคาสำหรับ {nights} คืน ({formatCurrency(originalRate)}/คืน)</div>
             <div className="flex items-baseline gap-2">
               {pricing?.hasDiscount && (
                 <span className="text-xs text-slate-400 line-through font-semibold">
@@ -176,8 +177,8 @@ export function RoomCard({ room, checkIn, checkOut, guests }: RoomCardProps) {
               </span>
               <span className="text-xs text-slate-500 font-medium">/คืน</span>
             </div>
-            <div className="text-[11px] text-slate-500 font-medium">
-              ยอดรวม: <span className="font-bold text-slate-800">{formatCurrency(totalAmount)}</span>
+            <div className="text-xs text-slate-600 font-medium">
+              ยอดรวม: <span className="font-extrabold text-slate-900 text-sm">{formatCurrency(totalAmount)}</span>
             </div>
           </div>
 
