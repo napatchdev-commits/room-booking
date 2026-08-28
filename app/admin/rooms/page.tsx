@@ -31,14 +31,16 @@ export default function AdminRoomsPage() {
   const [amenitiesInput, setAmenitiesInput] = useState('Free Wi-Fi, Air Conditioning, Breakfast Included');
   const [imageUrl, setImageUrl] = useState('');
   const [roomStatus, setRoomStatus] = useState<Room['status']>('available');
+  const [isSavingRoom, setIsSavingRoom] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Room Type modal state
   const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
   const [newTypeName, setNewTypeName] = useState('');
   const [newTypePrice, setNewTypePrice] = useState<number>(1500);
   const [newTypeCover, setNewTypeCover] = useState('');
-
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isSavingType, setIsSavingType] = useState(false);
+  const [typeErrorMsg, setTypeErrorMsg] = useState<string | null>(null);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -51,7 +53,12 @@ export default function AdminRoomsPage() {
       const tData = await tRes.json();
 
       if (rData.success) setRooms(rData.rooms || []);
-      if (tData.success) setRoomTypes(tData.roomTypes || []);
+      if (tData.success) {
+        setRoomTypes(tData.roomTypes || []);
+        if (tData.roomTypes?.length > 0 && !roomTypeId) {
+          setRoomTypeId(tData.roomTypes[0].id);
+        }
+      }
     } catch (err) {
       console.error('Fetch error:', err);
     } finally {
@@ -74,6 +81,7 @@ export default function AdminRoomsPage() {
     setAmenitiesInput('Free Wi-Fi, Air Conditioning, Breakfast Included');
     setImageUrl('https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&auto=format&fit=crop&q=80');
     setRoomStatus('available');
+    setErrorMsg(null);
     setIsRoomModalOpen(true);
   };
 
@@ -88,11 +96,18 @@ export default function AdminRoomsPage() {
     setAmenitiesInput((room.amenities || []).join(', '));
     setImageUrl(room.room_images?.[0]?.image_url || '');
     setRoomStatus(room.status);
+    setErrorMsg(null);
     setIsRoomModalOpen(true);
   };
 
   const handleSaveRoom = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!roomTypeId) {
+      setErrorMsg('กรุณาเลือกประเภทห้องพัก หรือกด "+ เพิ่มประเภทห้อง" ก่อน');
+      return;
+    }
+
+    setIsSavingRoom(true);
     setErrorMsg(null);
 
     const amenities = amenitiesInput.split(',').map((s) => s.trim()).filter(Boolean);
@@ -124,6 +139,7 @@ export default function AdminRoomsPage() {
       const data = await res.json();
       if (!data.success) {
         setErrorMsg(data.error || 'Failed to save room');
+        setIsSavingRoom(false);
         return;
       }
 
@@ -131,7 +147,9 @@ export default function AdminRoomsPage() {
       fetchData();
     } catch (err) {
       console.error('Save room error:', err);
-      setErrorMsg('Error saving room');
+      setErrorMsg('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+    } finally {
+      setIsSavingRoom(false);
     }
   };
 
@@ -154,24 +172,35 @@ export default function AdminRoomsPage() {
     e.preventDefault();
     if (!newTypeName.trim()) return;
 
+    setIsSavingType(true);
+    setTypeErrorMsg(null);
+
     try {
       const res = await fetch('/api/room-types', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: newTypeName,
+          name: newTypeName.trim(),
           base_price: newTypePrice,
-          cover_image: newTypeCover,
+          cover_image: newTypeCover.trim() || null,
         }),
       });
       const data = await res.json();
       if (data.success) {
         setIsTypeModalOpen(false);
         setNewTypeName('');
-        fetchData();
+        if (data.roomType?.id) {
+          setRoomTypeId(data.roomType.id);
+        }
+        await fetchData();
+      } else {
+        setTypeErrorMsg(data.error || 'ไม่สามารถสร้างประเภทห้องได้ กรุณารัน SQL RLS ใน Supabase');
       }
     } catch (err) {
       console.error('Create room type error:', err);
+      setTypeErrorMsg('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+    } finally {
+      setIsSavingType(false);
     }
   };
 
@@ -191,7 +220,10 @@ export default function AdminRoomsPage() {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setIsTypeModalOpen(true)}
+            onClick={() => {
+              setTypeErrorMsg(null);
+              setIsTypeModalOpen(true);
+            }}
             className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 shadow-sm flex items-center gap-1.5 transition-colors"
           >
             <FolderPlus className="w-4 h-4 text-resort-600" />
@@ -216,7 +248,7 @@ export default function AdminRoomsPage() {
             <div className="text-3xl">🛏️</div>
             <h3 className="text-sm font-bold text-slate-800">ยังไม่มีห้องพักในระบบ</h3>
             <p className="text-xs text-slate-500 max-w-sm mx-auto">
-              กดปุ่ม &quot;+ เพิ่มห้องพักใหม่&quot; ด้านบน เพื่อเริ่มสร้างห้องพักจริงในรีสอร์ทของคุณ
+              เริ่มต้นด้วยการกดปุ่ม &quot;+ เพิ่มประเภทห้อง&quot; จากนั้นกด &quot;+ เพิ่มห้องพักใหม่&quot;
             </p>
           </div>
         ) : (
@@ -299,8 +331,9 @@ export default function AdminRoomsPage() {
             </h2>
 
             {errorMsg && (
-              <div className="p-3 bg-red-50 text-red-700 text-xs rounded-xl font-medium">
-                {errorMsg}
+              <div className="p-3 bg-red-50 text-red-700 text-xs rounded-xl font-medium flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{errorMsg}</span>
               </div>
             )}
 
@@ -337,8 +370,11 @@ export default function AdminRoomsPage() {
                     value={roomTypeId}
                     onChange={(e) => setRoomTypeId(e.target.value)}
                     required
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium"
                   >
+                    {roomTypes.length === 0 && (
+                      <option value="">-- ยังไม่มีประเภทห้อง --</option>
+                    )}
                     {roomTypes.map((t) => (
                       <option key={t.id} value={t.id}>{t.name}</option>
                     ))}
@@ -424,9 +460,10 @@ export default function AdminRoomsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-resort-700 hover:bg-resort-800 text-white rounded-xl font-bold"
+                  disabled={isSavingRoom}
+                  className="px-5 py-2 bg-resort-700 hover:bg-resort-800 text-white rounded-xl font-bold shadow-md disabled:opacity-50"
                 >
-                  บันทึกข้อมูล
+                  {isSavingRoom ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
                 </button>
               </div>
             </form>
@@ -441,15 +478,24 @@ export default function AdminRoomsPage() {
             <h2 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-3">
               เพิ่มประเภทห้องพักใหม่
             </h2>
+
+            {typeErrorMsg && (
+              <div className="p-3 bg-red-50 text-red-700 text-xs rounded-xl font-medium flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{typeErrorMsg}</span>
+              </div>
+            )}
+
             <form onSubmit={handleCreateRoomType} className="space-y-3 text-xs">
               <div>
-                <label className="block font-bold text-slate-700 mb-1">ชื่อประเภทห้อง (เช่น Deluxe Villa) *</label>
+                <label className="block font-bold text-slate-700 mb-1">ชื่อประเภทห้อง (เช่น Deluxe Villa, เตียงคู่) *</label>
                 <input
                   type="text"
                   required
+                  placeholder="เช่น เตียงคู่, Deluxe Villa"
                   value={newTypeName}
                   onChange={(e) => setNewTypeName(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium"
                 />
               </div>
               <div>
@@ -459,13 +505,14 @@ export default function AdminRoomsPage() {
                   min={0}
                   value={newTypePrice}
                   onChange={(e) => setNewTypePrice(Number(e.target.value))}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold"
                 />
               </div>
               <div>
                 <label className="block font-bold text-slate-700 mb-1">รูปภาพหน้าปก (Cover URL)</label>
                 <input
                   type="url"
+                  placeholder="https://..."
                   value={newTypeCover}
                   onChange={(e) => setNewTypeCover(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
@@ -481,9 +528,10 @@ export default function AdminRoomsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-resort-700 text-white rounded-xl font-bold"
+                  disabled={isSavingType}
+                  className="px-5 py-2 bg-resort-700 hover:bg-resort-800 text-white rounded-xl font-bold shadow-md disabled:opacity-50"
                 >
-                  เพิ่มประเภทห้อง
+                  {isSavingType ? 'กำลังบันทึก...' : 'เพิ่มประเภทห้อง'}
                 </button>
               </div>
             </form>
