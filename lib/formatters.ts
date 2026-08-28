@@ -1,0 +1,77 @@
+import { format, parseISO, differenceInDays } from 'date-fns';
+
+export function formatCurrency(amount: number | string | undefined | null): string {
+  const num = typeof amount === 'string' ? parseFloat(amount) : amount || 0;
+  return new Intl.NumberFormat('th-TH', {
+    style: 'currency',
+    currency: 'THB',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(num);
+}
+
+export function formatNumber(amount: number | string | undefined | null): string {
+  const num = typeof amount === 'string' ? parseFloat(amount) : amount || 0;
+  return new Intl.NumberFormat('th-TH').format(num);
+}
+
+export function formatDateThai(dateStr: string | Date | undefined | null): string {
+  if (!dateStr) return '-';
+  try {
+    const date = typeof dateStr === 'string' ? parseISO(dateStr) : dateStr;
+    const monthsThai = [
+      'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+      'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'
+    ];
+    const day = date.getDate();
+    const month = monthsThai[date.getMonth()];
+    const yearThai = date.getFullYear() + 543;
+    return `${day} ${month} ${yearThai}`;
+  } catch {
+    return String(dateStr);
+  }
+}
+
+export function formatDateShort(dateStr: string | Date | undefined | null): string {
+  if (!dateStr) return '-';
+  try {
+    const date = typeof dateStr === 'string' ? parseISO(dateStr) : dateStr;
+    return format(date, 'dd/MM/yyyy');
+  } catch {
+    return String(dateStr);
+  }
+}
+
+export function formatDateTime(dateStr: string | Date | undefined | null): string {
+  if (!dateStr) return '-';
+  try {
+    const date = typeof dateStr === 'string' ? parseISO(dateStr) : dateStr;
+    return format(date, 'dd/MM/yyyy HH:mm');
+  } catch {
+    return String(dateStr);
+  }
+}
+
+export function calculateNights(checkInStr: string, checkOutStr: string): number {
+  if (!checkInStr || !checkOutStr) return 0;
+  try {
+    const checkIn = parseISO(checkInStr);
+    const checkOut = parseISO(checkOutStr);
+    const nights = differenceInDays(checkOut, checkIn);
+    return nights > 0 ? nights : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export function formatPhone(phone: string | undefined | null): string {
+  if (!phone) return '-';
+  const cleaned = phone.replace(/\D/g, '');
+  if (cleaned.length === 10) {
+    return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+  }
+  if (cleaned.length === 9) {
+    return `${cleaned.slice(0, 2)}-${cleaned.slice(2, 5)}-${cleaned.slice(5)}`;
+  }
+  return phone;
+}
