@@ -5,19 +5,31 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
-    const testMsg = `🔔 ทดสอบการแจ้งเตือนจากระบบรีสอร์ท!\n\n📅 เวลา: ${new Date().toLocaleString('th-TH')}\n✅ ระบบเชื่อมต่อ LINE Bot สำเร็จเรียบร้อยแล้ว\n\nเมื่อมีลูกค้าจองห้องพักหรือแนบสลิปโอนเงิน ระบบจะแจ้งเตือนมายัง LINE นี้โดยอัตโนมัติครับ ✨`;
-    const result = await sendLineAdminNotification(testMsg);
+    const body = await req.json().catch(() => ({}));
+    const { channelAccessToken, adminUserId, notifyToken } = body;
 
-    if (!result) {
+    const testMsg = `🔔 ทดสอบการแจ้งเตือนจากระบบรีสอร์ท (สมบัติ รีสอร์ท)!\n\n📅 วันที่ & เวลา: ${new Date().toLocaleString('th-TH')}\n✅ ระบบเชื่อมต่อ LINE Bot สำเร็จเรียบร้อยแล้ว 100%\n\nเมื่อมีลูกค้ากดจองห้องพักหรือแนบสลิปชำระเงิน ระบบจะส่งข้อความแจ้งเตือนมายัง LINE นี้ทันทีครับ ✨`;
+
+    const result = await sendLineAdminNotification(testMsg, {
+      channelAccessToken,
+      adminUserId,
+      notifyToken,
+    });
+
+    if (!result.success) {
       return NextResponse.json({
         success: false,
-        error: 'ไม่สามารถส่งข้อความได้ กรุณาตรวจสอบว่าใส่ LINE Channel Access Token และ Admin User ID (หรือ LINE Notify Token) ถูกต้องแล้ว',
+        error: result.error || 'ไม่สามารถส่งข้อความแจ้งเตือนได้',
       });
     }
 
-    return NextResponse.json({ success: true, message: 'ส่งข้อความแจ้งเตือนไปยัง LINE สำเร็จ!' });
-  } catch (error) {
+    const methodDesc = result.method === 'MESSAGING_API' ? 'LINE Messaging API' : 'LINE Notify';
+    return NextResponse.json({
+      success: true,
+      message: `ส่งข้อความแจ้งเตือนไปยัง LINE สำเร็จแล้ว (ผ่าน ${methodDesc})! ตรวจสอบข้อความใน LINE ของคุณได้เลยครับ 🎉`,
+    });
+  } catch (error: any) {
     console.error('Notification test error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
 }

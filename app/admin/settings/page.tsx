@@ -162,7 +162,15 @@ export default function AdminSettingsPage() {
     setIsTestingLine(true);
     setLineTestResult(null);
     try {
-      const res = await fetch('/api/notifications/test', { method: 'POST' });
+      const res = await fetch('/api/notifications/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channelAccessToken: lineChannelAccessToken.trim(),
+          adminUserId: lineAdminUserId.trim(),
+          notifyToken: lineNotifyToken.trim(),
+        }),
+      });
       const data = await res.json();
       if (data.success) {
         setLineTestResult({ success: true, message: data.message || 'ส่งแจ้งเตือนสำเร็จ!' });
