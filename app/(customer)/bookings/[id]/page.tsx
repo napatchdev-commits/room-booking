@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Booking, Settings } from '@/types/database';
 import { formatCurrency, formatDateThai, formatDateTime, formatPhone } from '@/lib/formatters';
 import { generateBookingVoucherPdf } from '@/lib/pdf-generator';
+import liff from '@line/liff';
 import {
   Building2,
   Calendar,
@@ -20,6 +21,8 @@ import {
   ShieldCheck,
   Receipt as ReceiptIcon,
   Search,
+  ExternalLink,
+  Share2,
 } from 'lucide-react';
 
 export default function BookingDetailPage() {
@@ -31,6 +34,7 @@ export default function BookingDetailPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [downloadNote, setDownloadNote] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id || id === 'undefined' || id === 'null' || id === 'bookings') {
@@ -54,21 +58,57 @@ export default function BookingDetailPage() {
       .catch(() => {});
   }, [id, router]);
 
+  // Open in default mobile browser (Safari / Chrome) for full native download & print
+  const handleOpenInExternalBrowser = () => {
+    if (typeof window === 'undefined') return;
+    const currentUrl = window.location.href;
+    try {
+      if (liff && liff.isInClient && liff.isInClient()) {
+        liff.openWindow({ url: currentUrl, external: true });
+        return;
+      }
+    } catch {
+      // fallback
+    }
+    window.open(currentUrl, '_blank');
+  };
+
   const handleDownloadPdf = () => {
     if (!booking || !settings) return;
     setIsDownloadingPdf(true);
+    setDownloadNote(null);
     try {
       const doc = generateBookingVoucherPdf(booking, settings);
-      doc.save(`Voucher_${booking.booking_number}.pdf`);
+      const fileName = `Voucher_${booking.booking_number}.pdf`;
+      doc.save(fileName);
+
+      // Also create a data blob link fallback for mobile webviews
+      const blob = doc.output('blob');
+      const blobUrl = URL.createObjectURL(blob);
+
+      // If inside LINE in-app webview
+      const isLine = typeof navigator !== 'undefined' && /Line/i.test(navigator.userAgent);
+      if (isLine) {
+        setDownloadNote(
+          '💡 หากดาวน์โหลดใน LINE ไม่ขึ้น แนะนำกดปุ่ม "เปิดใน Safari / Chrome" ด้านขวา เพื่อดาวน์โหลดหรือพิมพ์ได้ทันทีครับ'
+        );
+        window.open(blobUrl, '_blank');
+      }
     } catch (err) {
       console.error('PDF generation error:', err);
+      setDownloadNote('เกิดข้อผิดพลาดในการสร้างไฟล์ PDF');
     } finally {
       setIsDownloadingPdf(false);
     }
   };
 
   const handlePrint = () => {
-    window.print();
+    if (typeof window === 'undefined') return;
+    try {
+      window.print();
+    } catch {
+      handleOpenInExternalBrowser();
+    }
   };
 
   if (isLoading) {
@@ -111,8 +151,6 @@ export default function BookingDetailPage() {
     );
   }
 
-  const firstItem = booking.booking_items?.[0];
-
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 md:py-10 space-y-6">
       {/* Top Actions Bar */}
@@ -126,11 +164,11 @@ export default function BookingDetailPage() {
           </h1>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={handleDownloadPdf}
             disabled={isDownloadingPdf}
-            className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl border border-slate-300 shadow-sm flex items-center gap-1.5 transition-colors"
+            className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl border border-slate-300 shadow-sm flex items-center gap-1.5 transition-colors disabled:opacity-50"
           >
             <Download className="w-3.5 h-3.5 text-resort-600" />
             <span>{isDownloadingPdf ? 'กำลังสร้าง...' : 'ดาวน์โหลด PDF'}</span>
@@ -142,6 +180,15 @@ export default function BookingDetailPage() {
           >
             <Printer className="w-3.5 h-3.5 text-slate-600" />
             <span>พิมพ์</span>
+          </button>
+
+          <button
+            onClick={handleOpenInExternalBrowser}
+            title="เปิดใน Safari หรือ Google Chrome"
+            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl border border-slate-300 shadow-sm flex items-center gap-1.5 transition-colors"
+          >
+            <ExternalLink className="w-3.5 h-3.5 text-slate-600" />
+            <span>เปิดเบราว์เซอร์</span>
           </button>
 
           {Number(booking.remaining_balance) > 0 && booking.status !== 'CANCELLED' && (
@@ -156,12 +203,19 @@ export default function BookingDetailPage() {
         </div>
       </div>
 
+      {downloadNote && (
+        <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl text-amber-800 text-xs flex items-center gap-2 shadow-sm animate-in fade-in no-print">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <span>{downloadNote}</span>
+        </div>
+      )}
+
       {/* Main Voucher Printable Box */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-6 md:p-8 space-y-6">
+      <div id="voucher-card" className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden p-6 md:p-8 space-y-6">
         {/* Resort Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-resort-700 text-white flex items-center justify-center font-bold text-xl shadow-md">
+            <div className="w-12 h-12 rounded-2xl bg-resort-700 text-white flex items-center justify-center font-bold text-xl shadow-md">
               <Building2 className="w-6 h-6" />
             </div>
             <div>
@@ -184,7 +238,7 @@ export default function BookingDetailPage() {
         </div>
 
         {/* Status Alert Banner */}
-        <div className="flex items-center justify-between p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
+        <div className="flex items-center justify-between p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80">
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-resort-600" />
             <span className="text-xs font-semibold text-slate-600">สถานะการจอง:</span>
@@ -208,7 +262,7 @@ export default function BookingDetailPage() {
 
         {/* 2-Column Guest & Stay Details */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200/70 space-y-2 text-xs">
+          <div className="bg-slate-50/70 p-4 rounded-2xl border border-slate-200/70 space-y-2 text-xs">
             <div className="font-bold text-resort-700 uppercase tracking-wider text-[11px]">
               ข้อมูลผู้เข้าพัก (Guest Details)
             </div>
@@ -218,7 +272,7 @@ export default function BookingDetailPage() {
             <div><span className="text-slate-500">จำนวนผู้เข้าพัก:</span> <span className="font-semibold text-slate-800">{booking.num_guests} ท่าน</span></div>
           </div>
 
-          <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200/70 space-y-2 text-xs">
+          <div className="bg-slate-50/70 p-4 rounded-2xl border border-slate-200/70 space-y-2 text-xs">
             <div className="font-bold text-resort-700 uppercase tracking-wider text-[11px]">
               รายละเอียดการเข้าพัก (Stay Details)
             </div>
@@ -233,7 +287,7 @@ export default function BookingDetailPage() {
           <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
             รายการห้องพักที่จอง
           </h3>
-          <div className="border border-slate-200 rounded-xl overflow-hidden text-xs">
+          <div className="border border-slate-200 rounded-2xl overflow-hidden text-xs">
             <table className="w-full text-left">
               <thead className="bg-slate-50 border-b border-slate-200 font-bold text-slate-600">
                 <tr>
@@ -260,7 +314,7 @@ export default function BookingDetailPage() {
         </div>
 
         {/* Price Breakdown Calculation */}
-        <div className="bg-slate-50 rounded-xl p-4 border border-slate-200/80 space-y-2 text-xs max-w-sm ml-auto">
+        <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80 space-y-2 text-xs max-w-sm ml-auto">
           <div className="flex justify-between text-slate-600">
             <span>ราคารวมห้องพัก:</span>
             <span>{formatCurrency(booking.subtotal_amount)}</span>
@@ -280,7 +334,7 @@ export default function BookingDetailPage() {
             </div>
           )}
 
-          <div className="flex justify-between text-slate-900 font-extrabold text-sm pt-2 border-t border-slate-200">
+          <div className="flex justify-between text-slate-900 font-extrabold text-base pt-2 border-t border-slate-200">
             <span>ยอดสุทธิ (Net Total):</span>
             <span className="text-resort-700">{formatCurrency(booking.net_total)}</span>
           </div>
@@ -308,7 +362,7 @@ export default function BookingDetailPage() {
 
       {/* Payment & Receipts History Section */}
       {booking.payments && booking.payments.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4 no-print">
+        <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm space-y-4 no-print">
           <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
             <ReceiptIcon className="w-4 h-4 text-resort-600" />
             <span>ประวัติการชำระเงินและใบเสร็จ (Payments & Receipts)</span>

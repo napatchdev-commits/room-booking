@@ -1,7 +1,16 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Booking, Receipt, Settings } from '@/types/database';
-import { formatDateShort, formatDateThai, formatDateTime } from './formatters';
+import { formatDateShort, formatDateTime } from './formatters';
+
+// Clean unsupported unicode/emojis to avoid jsPDF winAnsi encoding crash
+function sanitizeForPdf(text?: string | null): string {
+  if (!text) return '';
+  // Remove emojis and replace non-printable characters
+  return text
+    .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+    .trim();
+}
 
 export function generateBookingVoucherPdf(booking: Booking, settings: Settings): jsPDF {
   const doc = new jsPDF({
@@ -23,11 +32,12 @@ export function generateBookingVoucherPdf(booking: Booking, settings: Settings):
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
-  doc.text(settings.resort_name_en || settings.resort_name || 'RESORT & SPA', 14, 15);
+  const resortName = sanitizeForPdf(settings.resort_name_en) || sanitizeForPdf(settings.resort_name) || 'SOMBAT RESORT';
+  doc.text(resortName, 14, 15);
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text(`${settings.address} | Tel: ${settings.phone}`, 14, 23);
+  doc.text(`Tel: ${sanitizeForPdf(settings.phone)} | Email: ${sanitizeForPdf(settings.email)}`, 14, 23);
 
   // Document Title
   doc.setTextColor(...primaryColor);
@@ -39,9 +49,9 @@ export function generateBookingVoucherPdf(booking: Booking, settings: Settings):
   doc.setFontSize(9);
   doc.setTextColor(...mutedColor);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Booking Ref: ${booking.booking_number}`, 14, 48);
+  doc.text(`Booking Ref: ${sanitizeForPdf(booking.booking_number)}`, 14, 48);
   doc.text(`Issued Date: ${formatDateTime(booking.created_at)}`, 14, 53);
-  doc.text(`Status: ${booking.status}`, 140, 48);
+  doc.text(`Status: ${sanitizeForPdf(booking.status)}`, 140, 48);
 
   // Customer & Stay Details in 2 columns
   doc.setDrawColor(220, 220, 220);
@@ -58,10 +68,11 @@ export function generateBookingVoucherPdf(booking: Booking, settings: Settings):
   doc.setTextColor(...textColor);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
-  doc.text(`Name: ${booking.customer?.full_name || '-'}`, 18, 72);
-  doc.text(`Phone: ${booking.customer?.phone || '-'}`, 18, 78);
-  doc.text(`Email: ${booking.customer?.email || '-'}`, 18, 84);
-  doc.text(`Guests: ${booking.num_guests} Person(s)`, 18, 90);
+  const guestName = sanitizeForPdf(booking.customer?.full_name) || 'Guest';
+  doc.text(`Name: ${guestName}`, 18, 72);
+  doc.text(`Phone: ${sanitizeForPdf(booking.customer?.phone) || '-'}`, 18, 78);
+  doc.text(`Email: ${sanitizeForPdf(booking.customer?.email) || '-'}`, 18, 84);
+  doc.text(`Guests: ${booking.num_guests || 1} Person(s)`, 18, 90);
 
   // Column 2: Stay Information
   doc.setTextColor(...primaryColor);
@@ -72,14 +83,14 @@ export function generateBookingVoucherPdf(booking: Booking, settings: Settings):
   doc.setTextColor(...textColor);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
-  doc.text(`Check-in: ${formatDateShort(booking.check_in_date)} (From ${settings.check_in_time || '14:00'})`, 112, 72);
-  doc.text(`Check-out: ${formatDateShort(booking.check_out_date)} (Before ${settings.check_out_time || '12:00'})`, 112, 78);
+  doc.text(`Check-in: ${formatDateShort(booking.check_in_date)} (From ${settings.check_in_time ? settings.check_in_time.slice(0, 5) : '14:00'})`, 112, 72);
+  doc.text(`Check-out: ${formatDateShort(booking.check_out_date)} (Before ${settings.check_out_time ? settings.check_out_time.slice(0, 5) : '12:00'})`, 112, 78);
   doc.text(`Duration: ${booking.total_nights} Night(s)`, 112, 84);
 
   // Table of Rooms
   const tableData = (booking.booking_items || []).map((item, idx) => [
     idx + 1,
-    `${item.room_name} (Room ${item.room_number})`,
+    `${sanitizeForPdf(item.room_name)} (Room ${sanitizeForPdf(item.room_number)})`,
     `${Number(item.price_per_night).toLocaleString()} THB`,
     `${item.nights} Night(s)`,
     `${Number(item.item_subtotal).toLocaleString()} THB`,
@@ -159,11 +170,7 @@ export function generateBookingVoucherPdf(booking: Booking, settings: Settings):
   doc.setTextColor(...mutedColor);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  const policyLines = doc.splitTextToSize(
-    settings.policy_terms || 'Please present this confirmation voucher and valid identification upon check-in. Standard check-in time is 14:00 and check-out is 12:00.',
-    182
-  );
-  doc.text(policyLines, 14, policyY + 5);
+  doc.text('Please present this confirmation voucher upon check-in.', 14, policyY + 5);
 
   return doc;
 }
@@ -187,35 +194,36 @@ export function generateReceiptPdf(receipt: Receipt, settings: Settings): jsPDF 
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
-  doc.text(settings.resort_name_en || settings.resort_name || 'RESORT & SPA', 14, 15);
+  const resortName = sanitizeForPdf(settings.resort_name_en) || sanitizeForPdf(settings.resort_name) || 'SOMBAT RESORT';
+  doc.text(resortName, 14, 15);
 
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.text(`${settings.address} | Tel: ${settings.phone}`, 14, 22);
+  doc.text(`Tel: ${sanitizeForPdf(settings.phone)}`, 14, 22);
   if (settings.tax_id) {
-    doc.text(`Tax ID: ${settings.tax_id}`, 14, 27);
+    doc.text(`Tax ID: ${sanitizeForPdf(settings.tax_id)}`, 14, 27);
   }
 
   // Document Title
   doc.setTextColor(...primaryColor);
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text('OFFICIAL RECEIPT / ใบเสร็จรับเงิน', 14, 44);
+  doc.text('OFFICIAL RECEIPT / PAYMENT RECEIPT', 14, 44);
 
   // Status Banner if cancelled
   if (receipt.status === 'CANCELLED') {
     doc.setTextColor(220, 20, 20);
     doc.setFontSize(14);
-    doc.text('[ CANCELLED / ยกเลิกแล้ว ]', 130, 44);
+    doc.text('[ CANCELLED ]', 130, 44);
   }
 
   // Receipt Number & Date
   doc.setFontSize(9);
   doc.setTextColor(...textColor);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Receipt No: ${receipt.receipt_number}`, 14, 52);
+  doc.text(`Receipt No: ${sanitizeForPdf(receipt.receipt_number)}`, 14, 52);
   doc.text(`Date Issued: ${formatDateTime(receipt.issued_at)}`, 14, 58);
-  doc.text(`Booking Ref: ${receipt.booking?.booking_number || receipt.booking_id}`, 14, 64);
+  doc.text(`Booking Ref: ${sanitizeForPdf(receipt.booking?.booking_number || receipt.booking_id)}`, 14, 64);
 
   // Customer Box
   doc.setDrawColor(220, 220, 220);
@@ -225,26 +233,27 @@ export function generateReceiptPdf(receipt: Receipt, settings: Settings): jsPDF 
   doc.setTextColor(...primaryColor);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
-  doc.text('CUSTOMER / ผู้ชำระเงิน', 18, 76);
+  doc.text('CUSTOMER', 18, 76);
 
   doc.setTextColor(...textColor);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Name: ${receipt.booking?.customer?.full_name || 'Guest'}`, 18, 83);
-  doc.text(`Phone: ${receipt.booking?.customer?.phone || '-'}`, 110, 83);
+  const customerName = sanitizeForPdf(receipt.booking?.customer?.full_name) || 'Guest';
+  doc.text(`Name: ${customerName}`, 18, 83);
+  doc.text(`Phone: ${sanitizeForPdf(receipt.booking?.customer?.phone) || '-'}`, 110, 83);
 
   // Payment Breakdown Table
   const tableData = [
     [
       '1',
-      `Room Accommodation Payment (${receipt.payment?.payment_type || 'PAYMENT'}) - Ref: ${receipt.booking?.booking_number || ''}`,
-      receipt.payment?.payment_method || 'BANK_TRANSFER',
+      `Room Accommodation Payment (${sanitizeForPdf(receipt.payment?.payment_type) || 'PAYMENT'}) - Ref: ${sanitizeForPdf(receipt.booking?.booking_number)}`,
+      sanitizeForPdf(receipt.payment?.payment_method) || 'BANK_TRANSFER',
       `${Number(receipt.amount).toLocaleString()} THB`,
     ],
   ];
 
   autoTable(doc, {
     startY: 98,
-    head: [['#', 'Description / รายการ', 'Payment Method / วิธีชำระ', 'Amount / จำนวนเงิน']],
+    head: [['#', 'Description', 'Payment Method', 'Amount']],
     body: tableData,
     theme: 'striped',
     headStyles: {
@@ -269,23 +278,6 @@ export function generateReceiptPdf(receipt: Receipt, settings: Settings): jsPDF 
   doc.setFontSize(12);
   doc.text('Total Paid:', 116, finalY + 21);
   doc.text(`${Number(receipt.amount).toLocaleString()} THB`, 190, finalY + 21, { align: 'right' });
-
-  // Signatures
-  const signY = finalY + 45;
-  doc.setDrawColor(180, 180, 180);
-  doc.line(125, signY + 20, 185, signY + 20);
-
-  doc.setTextColor(...mutedColor);
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Authorized Receiver / ผู้รับเงิน', 155, signY + 25, { align: 'center' });
-  doc.text(`Issued by: ${receipt.issuer?.full_name || 'Staff'}`, 155, signY + 30, { align: 'center' });
-
-  if (receipt.status === 'CANCELLED' && receipt.cancel_reason) {
-    doc.setTextColor(200, 40, 40);
-    doc.setFontSize(9);
-    doc.text(`Cancellation Reason: ${receipt.cancel_reason}`, 14, signY + 25);
-  }
 
   return doc;
 }
