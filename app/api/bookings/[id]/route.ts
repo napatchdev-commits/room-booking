@@ -102,3 +102,57 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const { id } = params;
+    const { searchParams } = new URL(req.url);
+    const actorName = searchParams.get('actorName') || 'Admin';
+
+    const supabase = getAdminClient();
+
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    let query = supabase.from('bookings').select('*, booking_items(*)');
+    if (isUuid) query = query.eq('id', id);
+    else query = query.eq('booking_number', id);
+
+    const { data: booking } = await query.maybeSingle();
+    if (!booking) {
+      return NextResponse.json({ error: 'ไม่พบรายการจองนี้' }, { status: 404 });
+    }
+
+    const bookingId = booking.id;
+
+    // 1. Delete associated receipts
+    await supabase.from('receipts').delete().eq('booking_id', bookingId);
+
+    // 2. Delete associated payments
+    await supabase.from('payments').delete().eq('booking_id', bookingId);
+
+    // 3. Delete associated booking discounts
+    await supabase.from('booking_discounts').delete().eq('booking_id', bookingId);
+
+    // 4. Delete associated booking items
+    await supabase.from('booking_items').delete().eq('booking_id', bookingId);
+
+    // 5. Delete the main booking
+    const { error: bErr } = await supabase.from('bookings').delete().eq('id', bookingId);
+    if (bErr) {
+      return NextResponse.json({ error: bErr.message }, { status: 500 });
+    }
+
+    await logAuditEvent({
+      actorName,
+      action: 'BOOKING_DELETE',
+      entity: 'booking',
+      entityId: bookingId,
+      detailsBefore: booking,
+    });
+
+    return NextResponse.json({ success: true, message: 'ลบรายการจองเรียบร้อยแล้ว' });
+  } catch (error: any) {
+    console.error('Booking DELETE error:', error);
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
+  }
+}
+

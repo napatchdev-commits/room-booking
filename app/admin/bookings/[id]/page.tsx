@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Booking, UserRole } from '@/types/database';
 import { formatCurrency, formatDateThai, formatDateTime, formatPhone } from '@/lib/formatters';
@@ -19,15 +19,18 @@ import {
   Clock,
   User,
   History,
+  Trash2,
 } from 'lucide-react';
 
 export default function AdminBookingDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
 
   const [booking, setBooking] = useState<Booking | null>(null);
   const [currentRole, setCurrentRole] = useState<UserRole>('OWNER');
   const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Status Change state
   const [statusInput, setStatusInput] = useState<Booking['status']>('PENDING');
@@ -79,6 +82,31 @@ export default function AdminBookingDetailPage() {
     }
   };
 
+  const handleDeleteBooking = async () => {
+    if (!booking) return;
+    const confirmDelete = window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบรายการจอง ${booking.booking_number} นี้? ข้อมูลทั้งหมดจะถูกลบถาวร`);
+    if (!confirmDelete) return;
+
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/bookings/${booking.id}?actorName=Admin (${currentRole})`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('ลบรายการจองสำเร็จ');
+        router.push('/admin/bookings');
+      } else {
+        alert(data.error || 'ไม่สามารถลบรายการจองได้');
+      }
+    } catch (err) {
+      console.error('Delete error:', err);
+      alert('เกิดข้อผิดพลาดในการลบ');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (isLoading) {
     return <div className="p-12 text-center text-xs text-slate-400">กำลังโหลดข้อมูลการจอง...</div>;
   }
@@ -117,6 +145,16 @@ export default function AdminBookingDetailPage() {
             className="px-3.5 py-1.5 bg-resort-700 hover:bg-resort-800 text-white text-xs font-bold rounded-xl shadow-sm"
           >
             บันทึกสถานะ
+          </button>
+
+          <button
+            onClick={handleDeleteBooking}
+            disabled={isDeleting}
+            title="ลบรายการจองนี้"
+            className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold rounded-xl flex items-center gap-1 transition-colors disabled:opacity-50"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>{isDeleting ? 'กำลังลบ...' : 'ลบการจอง'}</span>
           </button>
         </div>
       </div>
