@@ -3,13 +3,10 @@ import autoTable from 'jspdf-autotable';
 import { Booking, Receipt, Settings } from '@/types/database';
 import { formatDateShort, formatDateTime } from './formatters';
 
-// Clean unsupported unicode/emojis to avoid jsPDF winAnsi encoding crash
+// Clean unsupported characters/emojis using standard ES5 regex
 function sanitizeForPdf(text?: string | null): string {
   if (!text) return '';
-  // Remove emojis and replace non-printable characters
-  return text
-    .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
-    .trim();
+  return text.replace(/[^\w\s\u0E00-\u0E7F.,\-()/#]/g, '').trim();
 }
 
 export function generateBookingVoucherPdf(booking: Booking, settings: Settings): jsPDF {
