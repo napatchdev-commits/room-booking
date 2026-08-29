@@ -53,7 +53,7 @@ export default function AdminLayout({
   const fetchLiveCounts = useCallback(async () => {
     try {
       // 1. Pending Bookings count
-      const bRes = await fetch('/api/bookings?status=PENDING', { cache: 'no-store' });
+      const bRes = await fetch('/api/bookings?status=PENDING&isAdmin=true', { cache: 'no-store' });
       const bData = await bRes.json();
       if (bData.success && Array.isArray(bData.bookings)) {
         setPendingBookingsCount(bData.bookings.length);

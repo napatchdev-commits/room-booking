@@ -49,7 +49,7 @@ export default function AdminDashboardPage() {
       .then((d) => d.success && setData(d))
       .catch(() => {});
 
-    fetch('/api/bookings')
+    fetch('/api/bookings?isAdmin=true')
       .then((r) => r.json())
       .then((d) => d.success && setRecentBookings((d.bookings || []).slice(0, 5)))
       .catch(() => {})

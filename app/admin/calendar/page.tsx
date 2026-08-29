@@ -25,7 +25,7 @@ export default function RoomCalendarPage() {
     try {
       const [roomsRes, bookingsRes] = await Promise.all([
         fetch('/api/rooms'),
-        fetch('/api/bookings'),
+        fetch('/api/bookings?isAdmin=true'),
       ]);
       const roomsData = await roomsRes.json();
       const bookingsData = await bookingsRes.json();

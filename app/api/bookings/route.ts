@@ -16,6 +16,12 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get('search');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
+    const isAdmin = searchParams.get('isAdmin') === 'true';
+
+    // Privacy & Security Check: If not admin and no customer filter provided, return empty
+    if (!isAdmin && !customerId && !search) {
+      return NextResponse.json({ success: true, bookings: [] });
+    }
 
     const supabase = getAdminClient();
 

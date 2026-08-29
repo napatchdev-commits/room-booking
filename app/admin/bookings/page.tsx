@@ -43,7 +43,7 @@ export default function AdminBookingsPage() {
   const fetchBookings = async () => {
     setIsLoading(true);
     try {
-      let url = `/api/bookings?status=${statusFilter}`;
+      let url = `/api/bookings?isAdmin=true&status=${statusFilter}`;
       if (searchTerm.trim()) {
         url += `&search=${encodeURIComponent(searchTerm.trim())}`;
       }
