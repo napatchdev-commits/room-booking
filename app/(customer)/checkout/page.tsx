@@ -215,8 +215,8 @@ function CheckoutContent() {
         // ignore
       }
 
-      // Redirect directly to Booking Voucher & Payment page
-      router.push(`/bookings/${bookData.booking.id}`);
+      // Redirect immediately to Payment page
+      router.push(`/bookings/${bookData.booking.id}/payment`);
     } catch (err) {
       console.error('Booking submission error:', err);
       setErrorMsg('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์ กรุณาลองใหม่อีกครั้ง');

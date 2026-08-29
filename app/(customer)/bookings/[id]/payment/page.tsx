@@ -28,9 +28,9 @@ export default function BookingPaymentPage() {
   const [successMsg, setSuccessMsg] = useState(false);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || id === 'undefined' || id === 'null') return;
 
-    fetch(`/api/bookings/${id}`)
+    fetch(`/api/bookings/${id}`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((d) => {
         if (d.success && d.booking) {
@@ -38,7 +38,7 @@ export default function BookingPaymentPage() {
           setCustomAmount(Number(d.booking.remaining_balance));
         }
       })
-      .catch(() => {})
+      .catch((err) => console.error('Failed to fetch booking for payment:', err))
       .finally(() => setIsLoading(false));
 
     fetch('/api/settings', { cache: 'no-store' })
