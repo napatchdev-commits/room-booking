@@ -2,7 +2,18 @@
 
 import React, { useState, useEffect } from 'react';
 import { Settings, BankAccount } from '@/types/database';
-import { Settings as SettingsIcon, Save, Building2, CreditCard, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import {
+  Settings as SettingsIcon,
+  Save,
+  Building2,
+  CreditCard,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  MapPin,
+  ExternalLink,
+  Navigation,
+} from 'lucide-react';
 
 export default function AdminSettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -132,6 +143,12 @@ export default function AdminSettingsPage() {
     }
   };
 
+  // Google Maps helper URLs
+  const currentMapQuery = encodeURIComponent(`${resortName || 'สมบัติ รีสอร์ท'} ${address || 'ไทรน้อย นนทบุรี'}`);
+  const previewMapEmbedUrl = `https://maps.google.com/maps?q=${currentMapQuery}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
+  const previewMapDirectUrl = `https://www.google.com/maps/search/?api=1&query=${currentMapQuery}`;
+  const previewMapDirectionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${currentMapQuery}`;
+
   if (isLoading) {
     return <div className="p-12 text-center text-xs text-slate-400">กำลังโหลดการตั้งค่า...</div>;
   }
@@ -146,7 +163,7 @@ export default function AdminSettingsPage() {
             <span>ตั้งค่าระบบรีสอร์ท (Resort Settings)</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            กำหนดชื่อรีสอร์ท ที่อยู่ เบอร์โทร บัญชีธนาคารรับเงิน และ LINE LIFF
+            กำหนดชื่อรีสอร์ท ที่อยู่ แผนที่ Google Maps บัญชีธนาคารรับเงิน และ LINE LIFF
           </p>
         </div>
       </div>
@@ -199,7 +216,7 @@ export default function AdminSettingsPage() {
             </div>
 
             <div className="sm:col-span-2">
-              <label className="block font-bold text-slate-700 mb-1">ที่อยู่รีสอร์ท *</label>
+              <label className="block font-bold text-slate-700 mb-1">ที่อยู่รีสอร์ท * (สำหรับแสดงผลและปักหมุดบน Google Maps)</label>
               <input
                 type="text"
                 required
@@ -265,6 +282,51 @@ export default function AdminSettingsPage() {
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono text-slate-900"
               />
             </div>
+          </div>
+        </div>
+
+        {/* Live Google Maps Preview Card */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-resort-600" />
+              <span>แผนที่ตำแหน่งรีสอร์ท (Google Maps Preview)</span>
+            </h2>
+            <div className="flex items-center gap-2">
+              <a
+                href={previewMapDirectionsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 bg-resort-50 hover:bg-resort-100 text-resort-700 rounded-xl text-xs font-bold flex items-center gap-1 transition-colors"
+              >
+                <Navigation className="w-3.5 h-3.5" />
+                <span>ทดสอบนำทาง</span>
+              </a>
+              <a
+                href={previewMapDirectUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1 transition-colors"
+              >
+                <span>เปิดใน Google Maps</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          </div>
+
+          <p className="text-[11px] text-slate-500">
+            ระบบจะสร้างแผนที่นำทางแบบ Interactive ให้ลูกค้าโดยอัตโนมัติจากที่อยู่ที่คุณกรอก
+          </p>
+
+          <div className="w-full h-64 sm:h-72 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 shadow-inner">
+            <iframe
+              title="Google Maps Admin Preview"
+              width="100%"
+              height="100%"
+              className="w-full h-full border-0"
+              loading="lazy"
+              src={previewMapEmbedUrl}
+            />
           </div>
         </div>
 
