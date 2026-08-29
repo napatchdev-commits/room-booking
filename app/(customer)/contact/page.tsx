@@ -8,7 +8,7 @@ export default function ContactUsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
 
   useEffect(() => {
-    fetch('/api/settings')
+    fetch('/api/settings', { cache: 'no-store' })
       .then((r) => r.json())
       .then((d) => d.success && setSettings(d.settings))
       .catch(() => {});

@@ -43,7 +43,7 @@ export default function BookingDetailPage() {
       .catch((err) => console.error('Failed to load booking:', err))
       .finally(() => setIsLoading(false));
 
-    fetch('/api/settings')
+    fetch('/api/settings', { cache: 'no-store' })
       .then((r) => r.json())
       .then((d) => d.success && setSettings(d.settings))
       .catch(() => {});

@@ -39,7 +39,7 @@ export default function AdminReceiptsPage() {
       const [rRes, pRes, sRes] = await Promise.all([
         fetch('/api/receipts'),
         fetch('/api/payments?status=VERIFIED'),
-        fetch('/api/settings'),
+        fetch('/api/settings', { cache: 'no-store' }),
       ]);
       const rData = await rRes.json();
       const pData = await pRes.json();

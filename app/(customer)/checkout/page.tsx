@@ -71,7 +71,7 @@ function CheckoutContent() {
       })
       .catch(() => {});
 
-    fetch('/api/settings')
+    fetch('/api/settings', { cache: 'no-store' })
       .then((r) => r.json())
       .then((d) => d.success && setSettings(d.settings))
       .catch(() => {});
