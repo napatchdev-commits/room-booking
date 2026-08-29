@@ -2,29 +2,56 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { logAuditEvent } from '@/lib/audit';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
+
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { id } = params;
-    const supabase = getAdminClient();
+    if (!id || id === 'undefined' || id === 'null') {
+      return NextResponse.json({ error: 'Invalid booking identifier' }, { status: 400 });
+    }
 
-    const { data: booking, error } = await supabase
+    const supabase = getAdminClient();
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+    let query = supabase
       .from('bookings')
       .select(`
         *,
         customer:customers(*),
         booking_items(*, room:rooms(*, room_images(*))),
-        booking_discounts(*, authorizer:profiles(full_name)),
-        payments(*, verifier:profiles(full_name)),
-        receipts(*, issuer:profiles(full_name))
-      `)
-      .or(`id.eq.${id},booking_number.eq.${id}`)
-      .single();
+        booking_discounts(*),
+        payments(*),
+        receipts(*)
+      `);
 
-    if (error || !booking) {
+    if (isUuid) {
+      query = query.eq('id', id);
+    } else {
+      query = query.eq('booking_number', id);
+    }
+
+    const { data: booking, error } = await query.maybeSingle();
+
+    if (error) {
+      console.error('Booking fetch error:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    if (!booking) {
       return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, booking });
+    return NextResponse.json(
+      { success: true, booking },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        },
+      }
+    );
   } catch (error) {
     console.error('Booking GET error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
