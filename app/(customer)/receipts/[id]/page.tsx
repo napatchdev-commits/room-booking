@@ -98,7 +98,7 @@ export default function ReceiptViewPage() {
   return (
     <div className="max-w-4xl mx-auto px-2 sm:px-4 py-6 md:py-10 space-y-6">
       {/* Top Action Buttons (Hidden when printing) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 no-print">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 print:hidden no-print">
         <Link
           href={booking ? `/bookings/${booking.id}` : '/bookings'}
           className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900"
@@ -120,7 +120,7 @@ export default function ReceiptViewPage() {
 
       {/* Cancelled Banner if applicable */}
       {receipt.status === 'CANCELLED' && (
-        <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs flex items-center gap-2 no-print">
+        <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs flex items-center gap-2 print:hidden no-print">
           <AlertTriangle className="w-4 h-4 flex-shrink-0" />
           <div>
             <span className="font-bold">[ ใบเสร็จนี้ถูกยกเลิกแล้ว ]</span>

@@ -32,42 +32,82 @@ body {
   background: #94a3b8;
 }
 
-/* Print Optimization */
+/* Print Optimization for Pure A4 Bill / Receipt */
 @media print {
   @page {
     size: A4 portrait;
-    margin: 10mm;
+    margin: 8mm;
   }
-  body {
-    background: white !important;
-    color: black !important;
+  
+  html, body {
     margin: 0 !important;
     padding: 0 !important;
+    background: white !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
+
+  /* Force hide all web UI, headers, navigation bars, buttons, links, banners, alerts */
   header,
   nav,
   footer,
   aside,
+  button,
+  a,
   .no-print,
-  .print\\:hidden,
+  [class*="no-print"],
+  [class*="print:hidden"],
   [role="navigation"],
   [data-no-print="true"] {
     display: none !important;
     visibility: hidden !important;
     height: 0 !important;
+    width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
     overflow: hidden !important;
   }
+
   .print-only {
     display: block !important;
   }
+
+  /* Standard A4 bill document presentation */
   #receipt-print-area {
+    display: block !important;
+    visibility: visible !important;
     border: 1px solid black !important;
-    padding: 24px !important;
+    padding: 24px 28px !important;
     margin: 0 auto !important;
     box-shadow: none !important;
     max-width: 100% !important;
     width: 100% !important;
     page-break-inside: avoid !important;
+    page-break-after: avoid !important;
+    background: white !important;
+  }
+
+  #receipt-print-area * {
+    visibility: visible !important;
+  }
+
+  #voucher-card {
+    display: block !important;
+    visibility: visible !important;
+    border: 1px solid #cbd5e1 !important;
+    padding: 24px 28px !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    page-break-inside: avoid !important;
+    page-break-after: avoid !important;
+    background: white !important;
+  }
+
+  #voucher-card * {
+    visibility: visible !important;
   }
 }
 

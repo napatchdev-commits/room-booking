@@ -106,7 +106,7 @@ export default function AdminLayout({
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col md:flex-row">
       {/* Sidebar for Desktop */}
-      <aside className="hidden md:flex md:w-64 bg-slate-900 text-white flex-col flex-shrink-0 min-h-screen">
+      <aside className="hidden md:flex md:w-64 bg-slate-900 text-white flex-col flex-shrink-0 min-h-screen print:hidden no-print">
         {/* Brand */}
         <div className="p-5 border-b border-slate-800 flex items-center justify-between">
           <Link href="/admin/dashboard" className="flex items-center gap-2.5">
@@ -174,7 +174,7 @@ export default function AdminLayout({
       {/* Main Content Shell */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar with Role Switcher & Live Notifications */}
-        <header className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-sm sticky top-0 z-30">
+        <header className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-sm sticky top-0 z-30 print:hidden no-print">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}

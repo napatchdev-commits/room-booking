@@ -154,7 +154,7 @@ export default function BookingDetailPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 md:py-10 space-y-6">
       {/* Top Actions Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 no-print">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 print:hidden no-print">
         <div>
           <span className="text-xs font-semibold text-resort-600 uppercase tracking-wider">
             Booking Confirmation
@@ -204,7 +204,7 @@ export default function BookingDetailPage() {
       </div>
 
       {downloadNote && (
-        <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl text-amber-800 text-xs flex items-center gap-2 shadow-sm animate-in fade-in no-print">
+        <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl text-amber-800 text-xs flex items-center gap-2 shadow-sm animate-in fade-in print:hidden no-print">
           <AlertCircle className="w-4 h-4 flex-shrink-0" />
           <span>{downloadNote}</span>
         </div>
