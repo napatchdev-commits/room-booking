@@ -16,7 +16,21 @@ export async function initLiff(liffId?: string): Promise<boolean> {
   if (typeof window === 'undefined') return false;
   if (isInitialized) return true;
 
-  const targetLiffId = liffId || process.env.NEXT_PUBLIC_LIFF_ID;
+  let targetLiffId = liffId || process.env.NEXT_PUBLIC_LIFF_ID;
+
+  // Fallback: If not in env, fetch from settings API
+  if (!targetLiffId) {
+    try {
+      const res = await fetch('/api/settings', { cache: 'no-store' });
+      const data = await res.json();
+      if (data.success && data.settings?.line_liff_id) {
+        targetLiffId = data.settings.line_liff_id;
+      }
+    } catch {
+      // ignore
+    }
+  }
+
   if (!targetLiffId) {
     console.warn('LINE LIFF ID is not configured.');
     return false;
