@@ -85,6 +85,8 @@ export default function ReceiptViewPage() {
 
   const booking = receipt.booking;
   const customer = booking?.customer;
+  const rawCustomerName = customer?.full_name || 'ลูกค้าทั่วไป';
+  const cleanCustomerName = rawCustomerName.replace(/[^\w\s\u0E00-\u0E7F.,\-()/#]/g, '').trim() || rawCustomerName;
   const items = booking?.booking_items || [];
   const totalAmount = Number(receipt.amount || booking?.net_total || 0);
   const subtotal = Number(booking?.subtotal_amount || totalAmount);
@@ -138,13 +140,18 @@ export default function ReceiptViewPage() {
           {/* Left: Resort Info */}
           <div className="col-span-8 space-y-1">
             <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 border border-black flex flex-col items-center justify-center rounded-sm text-center leading-none p-1">
-                <Palmtree className="w-5 h-5 text-black stroke-[1.5]" />
-                <span className="text-[7px] font-black tracking-tighter">SOMBAT</span>
+              <div className="w-11 h-11 border border-black flex flex-col items-center justify-center rounded-sm text-center leading-none p-1 flex-shrink-0">
+                <Palmtree className="w-5 h-5 text-black stroke-[1.75]" />
+                <span className="text-[7px] font-black tracking-tighter uppercase mt-0.5">SOMBAT</span>
               </div>
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-black">
-                {settings?.resort_name || 'สมบัติ รีสอร์ท'}
-              </h1>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-black">
+                  {settings?.resort_name || 'สมบัติ รีสอร์ท'}
+                </h1>
+                <span className="text-[10px] text-black font-semibold tracking-wider uppercase block">
+                  {settings?.resort_name_en || 'SOMBAT RESORT'}
+                </span>
+              </div>
             </div>
 
             <p className="text-xs text-black pt-1">
@@ -192,7 +199,7 @@ export default function ReceiptViewPage() {
           <div className="flex gap-2">
             <span className="font-bold min-w-[55px]">ลูกค้า :</span>
             <span className="font-bold text-slate-950">
-              {customer?.full_name || 'ลูกค้าทั่วไป'}
+              {cleanCustomerName}
             </span>
           </div>
 

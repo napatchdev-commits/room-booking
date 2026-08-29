@@ -34,15 +34,40 @@ body {
 
 /* Print Optimization */
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
   body {
     background: white !important;
     color: black !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
-  .no-print {
+  header,
+  nav,
+  footer,
+  aside,
+  .no-print,
+  .print\\:hidden,
+  [role="navigation"],
+  [data-no-print="true"] {
     display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    overflow: hidden !important;
   }
   .print-only {
     display: block !important;
+  }
+  #receipt-print-area {
+    border: 1px solid black !important;
+    padding: 24px !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    page-break-inside: avoid !important;
   }
 }
 
