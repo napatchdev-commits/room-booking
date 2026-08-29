@@ -7,8 +7,12 @@ export const fetchCache = 'force-no-store';
 
 import { logAuditEvent } from '@/lib/audit';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    // Read searchParams to guarantee dynamic request handling in Next.js App Router
+    const { searchParams } = new URL(req.url);
+    const _t = searchParams.get('_t');
+
     const supabase = getAdminClient();
     const { data: settings, error } = await supabase
       .from('settings')
