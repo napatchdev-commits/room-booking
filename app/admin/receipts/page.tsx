@@ -208,7 +208,7 @@ export default function AdminReceiptsPage() {
   const canCancelReceipt = checkRolePermission(currentRole, 'receipt.cancel');
 
   return (
-    <div className="space-y-6">
+    <div className={viewReceiptModal ? "space-y-6 print:hidden no-print" : "space-y-6"}>
       {/* Title */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -334,10 +334,10 @@ export default function AdminReceiptsPage() {
 
       {/* Admin In-Page Receipt Preview Modal */}
       {viewReceiptModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-          <div className="bg-slate-100 rounded-3xl max-w-4xl w-full my-6 p-4 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto animate-in zoom-in-95">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto print:p-0 print:m-0 print:bg-transparent print:static print:overflow-visible print:block">
+          <div className="bg-slate-100 rounded-3xl max-w-4xl w-full my-6 p-4 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto animate-in zoom-in-95 print:p-0 print:m-0 print:bg-transparent print:shadow-none print:max-h-none print:overflow-visible print:border-0 print:rounded-none">
             {/* Modal Header Actions */}
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3 no-print">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3 print:hidden no-print">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-resort-700 text-white flex items-center justify-center font-bold">
                   <ReceiptIcon className="w-4 h-4" />
