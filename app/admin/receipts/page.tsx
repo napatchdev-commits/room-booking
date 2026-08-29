@@ -2,17 +2,30 @@
 
 import React, { useState, useEffect } from 'react';
 import { Receipt, Payment, UserRole, Settings } from '@/types/database';
-import { formatCurrency, formatDateTime } from '@/lib/formatters';
+import { formatCurrency, formatDateTime, formatDateThaiLong, thaiBahtText } from '@/lib/formatters';
 import { checkRolePermission } from '@/lib/permissions';
 import { generateReceiptPdf } from '@/lib/pdf-generator';
-import { Receipt as ReceiptIcon, Plus, Download, Printer, XCircle, AlertCircle, Eye, Trash2 } from 'lucide-react';
-import Link from 'next/link';
+import {
+  Receipt as ReceiptIcon,
+  Plus,
+  Download,
+  Printer,
+  XCircle,
+  AlertCircle,
+  Eye,
+  Trash2,
+  X,
+  Palmtree,
+} from 'lucide-react';
 
 export default function AdminReceiptsPage() {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [verifiedPaymentsWithoutReceipt, setVerifiedPaymentsWithoutReceipt] = useState<Payment[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // View Receipt Preview Modal in Admin
+  const [viewReceiptModal, setViewReceiptModal] = useState<Receipt | null>(null);
 
   // Delete Receipt Modal
   const [deleteReceiptModal, setDeleteReceiptModal] = useState<Receipt | null>(null);
@@ -107,10 +120,11 @@ export default function AdminReceiptsPage() {
       }
 
       setIsIssueModalOpen(false);
+      setIssueNotes('');
       fetchData();
     } catch (err) {
       console.error('Issue receipt error:', err);
-      setIssueError('Server connection error');
+      setIssueError('เกิดข้อผิดพลาดในการเชื่อมต่อ');
     }
   };
 
@@ -125,7 +139,7 @@ export default function AdminReceiptsPage() {
     }
 
     if (!cancelReason.trim()) {
-      setCancelError('กรุณาระบุเหตุผลการยกเลิกใบเสร็จ');
+      setCancelError('กรุณาระบุเหตุผลการยกเลิก');
       return;
     }
 
@@ -152,7 +166,7 @@ export default function AdminReceiptsPage() {
       fetchData();
     } catch (err) {
       console.error('Cancel receipt error:', err);
-      setCancelError('Server connection error');
+      setCancelError('เกิดข้อผิดพลาดในการเชื่อมต่อ');
     }
   };
 
@@ -175,6 +189,9 @@ export default function AdminReceiptsPage() {
       const data = await res.json();
       if (data.success) {
         setDeleteReceiptModal(null);
+        if (viewReceiptModal?.id === id) {
+          setViewReceiptModal(null);
+        }
         fetchData();
       } else {
         alert(data.error || 'ไม่สามารถลบใบเสร็จได้');
@@ -200,7 +217,7 @@ export default function AdminReceiptsPage() {
             <span>จัดการใบเสร็จรับเงิน (Official Receipts)</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            ออกใบเสร็จรับเงินตามยอดชำระจริง ตรวจสอบและยกเลิกใบเสร็จพร้อมเก็บประวัติ
+            ออกใบเสร็จรับเงินตามยอดชำระจริง ตรวจสอบ ดูตัวอย่าง และพิมพ์ใบเสร็จในหน้าแอดมิน
           </p>
         </div>
 
@@ -221,19 +238,16 @@ export default function AdminReceiptsPage() {
       {/* Receipts Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         {isLoading ? (
-          <div className="p-12 text-center text-slate-400 text-xs">กำลังโหลดใบเสร็จรับเงิน...</div>
+          <div className="p-8 text-center text-xs text-slate-400">กำลังโหลดรายการใบเสร็จ...</div>
         ) : receipts.length === 0 ? (
-          <div className="p-16 text-center space-y-2">
-            <div className="text-3xl">🧾</div>
-            <h3 className="text-sm font-bold text-slate-800">ยังไม่มีใบเสร็จรับเงินที่ออก</h3>
-            <p className="text-xs text-slate-400">
-              เมื่อมีการชำระเงินที่อนุมัติแล้ว คุณสามารถกดปุ่ม &quot;+ ออกใบเสร็จรับเงิน&quot; ด้านบนได้
-            </p>
+          <div className="p-12 text-center space-y-2">
+            <ReceiptIcon className="w-10 h-10 text-slate-300 mx-auto" />
+            <div className="text-xs font-bold text-slate-600">ยังไม่มีประวัติการออกใบเสร็จรับเงิน</div>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
+              <thead className="bg-slate-50 border-b border-slate-200 font-bold text-slate-600">
                 <tr>
                   <th className="p-3">เลขที่ใบเสร็จ</th>
                   <th className="p-3">รหัสการจอง</th>
@@ -272,13 +286,14 @@ export default function AdminReceiptsPage() {
                       </span>
                     </td>
                     <td className="p-3 text-right space-x-1.5 whitespace-nowrap">
-                      <Link
-                        href={`/receipts/${r.id}`}
-                        title="ดูใบเสร็จ"
+                      {/* View inside Admin Modal */}
+                      <button
+                        onClick={() => setViewReceiptModal(r)}
+                        title="ดูใบเสร็จในหน้าแอดมิน"
                         className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg inline-block align-middle"
                       >
                         <Eye className="w-3.5 h-3.5" />
-                      </Link>
+                      </button>
 
                       <button
                         onClick={() => handleDownloadPdf(r)}
@@ -317,6 +332,236 @@ export default function AdminReceiptsPage() {
         )}
       </div>
 
+      {/* Admin In-Page Receipt Preview Modal */}
+      {viewReceiptModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-slate-100 rounded-3xl max-w-4xl w-full my-6 p-4 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto animate-in zoom-in-95">
+            {/* Modal Header Actions */}
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3 no-print">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-resort-700 text-white flex items-center justify-center font-bold">
+                  <ReceiptIcon className="w-4 h-4" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold text-slate-900">
+                    ใบเสร็จรับเงิน #{viewReceiptModal.receipt_number}
+                  </h2>
+                  <span className="text-[11px] text-slate-500">
+                    ออกเมื่อ: {formatDateTime(viewReceiptModal.issued_at)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => window.print()}
+                  className="px-3.5 py-1.5 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>พิมพ์ใบเสร็จ</span>
+                </button>
+
+                <button
+                  onClick={() => handleDownloadPdf(viewReceiptModal)}
+                  className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold border border-slate-300 flex items-center gap-1.5 shadow-sm transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5 text-resort-600" />
+                  <span>ดาวน์โหลด PDF</span>
+                </button>
+
+                <button
+                  onClick={() => setViewReceiptModal(null)}
+                  className="p-1.5 bg-white hover:bg-slate-200 text-slate-500 rounded-xl border border-slate-200 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Official Tax Receipt Document Box */}
+            <div
+              id="receipt-print-area"
+              className="bg-white text-black p-6 sm:p-10 border border-black shadow-md mx-auto print:border-0 print:p-0 print:shadow-none font-sans text-xs leading-relaxed"
+            >
+              {/* Header Grid */}
+              <div className="grid grid-cols-12 gap-2 pb-2">
+                {/* Left: Resort Info */}
+                <div className="col-span-8 space-y-1">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-11 h-11 border border-black flex flex-col items-center justify-center rounded-sm text-center leading-none p-1 flex-shrink-0">
+                      <Palmtree className="w-5 h-5 text-black stroke-[1.75]" />
+                      <span className="text-[7px] font-black tracking-tighter uppercase mt-0.5">SOMBAT</span>
+                    </div>
+                    <div>
+                      <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-black">
+                        {settings?.resort_name || 'สมบัติ รีสอร์ท'}
+                      </h1>
+                      <span className="text-[10px] text-black font-semibold tracking-wider uppercase block">
+                        {settings?.resort_name_en || 'SOMBAT RESORT'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-black pt-1">
+                    {settings?.address || '45/3 หมู่ 8 ตำบลราษฎร์นิยม อำเภอไทรน้อย จังหวัดนนทบุรี 11150'}
+                  </p>
+
+                  <p className="text-xs text-black">
+                    Tel : {settings?.phone || '062-6252564'} &nbsp;&nbsp; Line : {settings?.line_id || '@sombatcom'}
+                  </p>
+
+                  <p className="text-xs text-black">
+                    เลขประจำตัวผู้เสียภาษี : {settings?.tax_id || '0125569001220'}
+                  </p>
+                  <div className="w-full border-b border-black pt-1"></div>
+                </div>
+
+                {/* Right: Original Badge & Receipt Number / Date */}
+                <div className="col-span-4 flex flex-col items-end justify-between">
+                  <div className="border border-black px-6 py-1 text-center font-bold text-sm">
+                    ต้นฉบับ
+                  </div>
+
+                  <div className="text-right space-y-0.5 mt-2 w-full">
+                    <div className="text-base font-bold tracking-wide">ใบเสร็จรับเงิน</div>
+                    <div className="text-xs font-bold tracking-wider">RECEIPT</div>
+                    <div className="pt-1 flex justify-between text-xs font-bold">
+                      <span>เล่มที่</span>
+                      <span>1</span>
+                    </div>
+                    <div className="flex justify-between text-xs font-bold">
+                      <span>เลขที่</span>
+                      <span>{viewReceiptModal.receipt_number}</span>
+                    </div>
+                    <div className="flex justify-between text-xs font-bold">
+                      <span>วันที่</span>
+                      <span>{formatDateThaiLong(viewReceiptModal.issued_at)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Customer Information Block */}
+              <div className="my-3 space-y-1 text-xs">
+                <div className="flex gap-2">
+                  <span className="font-bold min-w-[55px]">ลูกค้า :</span>
+                  <span className="font-bold text-slate-950">
+                    {(viewReceiptModal.booking?.customer?.full_name || 'ลูกค้าทั่วไป').replace(/[^\w\s\u0E00-\u0E7F.,\-()/#]/g, '').trim()}
+                  </span>
+                </div>
+
+                {viewReceiptModal.booking?.customer?.phone && (
+                  <div className="flex gap-2 text-[11px] text-slate-700">
+                    <span className="min-w-[55px]">เบอร์โทร :</span>
+                    <span>{viewReceiptModal.booking.customer.phone}</span>
+                  </div>
+                )}
+
+                <div className="flex gap-2 text-[11px] text-slate-700">
+                  <span className="min-w-[55px]">ที่อยู่ :</span>
+                  <span>-</span>
+                </div>
+
+                <div className="flex gap-2 text-[11px] text-slate-700">
+                  <span className="min-w-[55px]">เลขประจำตัวผู้เสียภาษี :</span>
+                  <span>{viewReceiptModal.booking?.customer?.id_card || '-'}</span>
+                </div>
+              </div>
+
+              {/* Items Table */}
+              <div className="mt-4 border border-black overflow-hidden">
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-black text-center font-bold bg-white">
+                      <th className="py-2 px-2 border-r border-black w-12">ลำดับ</th>
+                      <th className="py-2 px-3 border-r border-black text-center">รายการ</th>
+                      <th className="py-2 px-2 border-r border-black w-14 text-center">จำนวน</th>
+                      <th className="py-2 px-2 border-r border-black w-14 text-center">หน่วย</th>
+                      <th className="py-2 px-3 border-r border-black w-24 text-center">ราคา/หน่วย</th>
+                      <th className="py-2 px-3 border-r border-black w-20 text-center">ส่วนลด</th>
+                      <th className="py-2 px-3 w-28 text-center">จำนวนเงิน</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-black/30 text-xs">
+                      <td className="py-2 px-2 border-r border-black text-center">1</td>
+                      <td className="py-2 px-3 border-r border-black">
+                        ชำระค่าห้องพัก (Ref: {viewReceiptModal.booking?.booking_number || viewReceiptModal.receipt_number})
+                      </td>
+                      <td className="py-2 px-2 border-r border-black text-center">1</td>
+                      <td className="py-2 px-2 border-r border-black text-center">งวด</td>
+                      <td className="py-2 px-3 border-r border-black text-right">
+                        {Number(viewReceiptModal.amount).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-2 px-3 border-r border-black text-center">-</td>
+                      <td className="py-2 px-3 text-right font-medium">
+                        {Number(viewReceiptModal.amount).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+
+                    {/* Empty padding rows */}
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <tr key={`empty-${i}`} className="border-b border-black/20 text-xs h-8">
+                        <td className="border-r border-black"></td>
+                        <td className="border-r border-black"></td>
+                        <td className="border-r border-black"></td>
+                        <td className="border-r border-black"></td>
+                        <td className="border-r border-black"></td>
+                        <td className="border-r border-black"></td>
+                        <td></td>
+                      </tr>
+                    ))}
+
+                    {/* Subtotal & Discount rows */}
+                    <tr className="border-t border-black text-xs">
+                      <td colSpan={5} rowSpan={2} className="border-r border-black align-top p-0"></td>
+                      <td className="py-1.5 px-3 border-r border-black text-center font-bold">รวม</td>
+                      <td className="py-1.5 px-3 text-right font-medium">
+                        {Number(viewReceiptModal.amount).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+
+                    <tr className="border-t border-black text-xs">
+                      <td className="py-1.5 px-3 border-r border-black text-center font-bold">ส่วนลด</td>
+                      <td className="py-1.5 px-3 text-right font-medium">-</td>
+                    </tr>
+
+                    {/* Grand Total & Thai Baht Text row */}
+                    <tr className="border-t-2 border-black font-bold text-xs bg-slate-100/70">
+                      <td colSpan={5} className="py-2.5 px-4 border-r border-black text-center text-sm">
+                        {thaiBahtText(viewReceiptModal.amount)}
+                      </td>
+                      <td className="py-2.5 px-3 border-r border-black text-center font-bold text-xs whitespace-nowrap">
+                        รวมยอดเงินสุทธิ
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-black text-sm">
+                        {Number(viewReceiptModal.amount).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Footer Signature Box */}
+              <div className="mt-10 grid grid-cols-2 text-xs pt-4">
+                <div>
+                  <p className="text-[11px] text-slate-500">
+                    * เอกสารนี้ออกโดยระบบอิเล็กทรอนิกส์ของรีสอร์ท
+                  </p>
+                </div>
+                <div className="text-center space-y-8 ml-auto w-48">
+                  <p className="font-bold">ผู้รับเงิน / ผู้มีอำนาจลงนาม</p>
+                  <div className="border-b border-black"></div>
+                  <p className="text-[11px] font-semibold text-slate-700">
+                    ({viewReceiptModal.issuer?.full_name || settings?.resort_name || 'สมบัติ รีสอร์ท'})
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Issue Receipt Modal */}
       {isIssueModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
@@ -331,61 +576,58 @@ export default function AdminReceiptsPage() {
               </div>
             )}
 
-            {verifiedPaymentsWithoutReceipt.length === 0 ? (
-              <div className="p-6 text-center text-xs text-slate-500">
-                ไม่มีรายการชำระเงินที่อนุมัติแล้วที่ยังไม่ออกใบเสร็จ
-              </div>
-            ) : (
-              <form onSubmit={handleIssueReceipt} className="space-y-3.5 text-xs">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    เลือกรายการชำระเงิน (Verified Payments) *
-                  </label>
+            <form onSubmit={handleIssueReceipt} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  เลือกรายการชำระเงินที่ต้องการออกใบเสร็จ *
+                </label>
+                {verifiedPaymentsWithoutReceipt.length === 0 ? (
+                  <div className="p-3 bg-slate-50 rounded-xl text-slate-500 text-center">
+                    ไม่มีรายการชำระเงินที่รอออกใบเสร็จ
+                  </div>
+                ) : (
                   <select
                     value={selectedPaymentId}
                     onChange={(e) => setSelectedPaymentId(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium"
                   >
-                    {verifiedPaymentsWithoutReceipt.map((p) => {
-                      const b = (p as any).booking;
-                      return (
-                        <option key={p.id} value={p.id}>
-                          {formatCurrency(p.amount)} - {b?.booking_number} ({b?.customer?.full_name})
-                        </option>
-                      );
-                    })}
+                    {verifiedPaymentsWithoutReceipt.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {formatCurrency(p.amount)} ({p.payment_type}) - Booking #{p.booking_id}
+                      </option>
+                    ))}
                   </select>
-                </div>
+                )}
+              </div>
 
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">หมายเหตุเพิ่มเติม</label>
-                  <input
-                    type="text"
-                    placeholder="เช่น ออกให้ตามคำขอของลูกค้า"
-                    value={issueNotes}
-                    onChange={(e) => setIssueNotes(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
-                  />
-                </div>
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">หมายเหตุเพิ่มเติม</label>
+                <textarea
+                  rows={2}
+                  placeholder="ระบุหมายเหตุบนใบเสร็จ (ถ้ามี)"
+                  value={issueNotes}
+                  onChange={(e) => setIssueNotes(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
+                />
+              </div>
 
-                <div className="pt-2 flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsIssueModalOpen(false)}
-                    className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold"
-                  >
-                    ยกเลิก
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2 bg-resort-700 text-white rounded-xl font-bold shadow-md"
-                  >
-                    ยืนยันออกใบเสร็จ
-                  </button>
-                </div>
-              </form>
-            )}
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsIssueModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  disabled={verifiedPaymentsWithoutReceipt.length === 0}
+                  className="px-5 py-2 bg-resort-700 hover:bg-resort-800 text-white rounded-xl font-bold shadow-md disabled:opacity-50"
+                >
+                  ยืนยันออกใบเสร็จ
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -459,7 +701,9 @@ export default function AdminReceiptsPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">ชื่อลูกค้า:</span>
-                <span className="font-semibold text-slate-800">{deleteReceiptModal.booking?.customer?.full_name || '-'}</span>
+                <span className="font-semibold text-slate-800">
+                  {deleteReceiptModal.booking?.customer?.full_name || '-'}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">จำนวนเงิน:</span>
