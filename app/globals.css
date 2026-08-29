@@ -33,12 +33,12 @@ body {
 }
 
 /* =========================================================================
-   PURE A4 PRINT OPTIMIZATION (ISOLATION OF BILL / RECEIPT ONLY)
+   PURE SINGLE-PAGE A4 PRINT OPTIMIZATION (STRICT 1 PAGE GUARANTEE)
    ========================================================================= */
 @media print {
   @page {
     size: A4 portrait;
-    margin: 8mm;
+    margin: 6mm 8mm;
   }
   
   html, body {
@@ -48,11 +48,13 @@ body {
     color: black !important;
     width: 100% !important;
     height: 100% !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
-  /* 1. Hide everything on the page */
+  /* 1. Hide everything on the page by default */
   body * {
     visibility: hidden !important;
   }
@@ -99,7 +101,7 @@ body {
     visibility: visible !important;
   }
 
-  /* 5. Position the bill perfectly at the top of A4 paper */
+  /* 5. Position the bill perfectly at the top of A4 paper with STRICT 1 PAGE constraint */
   #receipt-print-area {
     display: block !important;
     position: absolute !important;
@@ -107,14 +109,19 @@ body {
     top: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
+    max-height: 275mm !important;
     margin: 0 !important;
-    padding: 16px 20px !important;
+    padding: 14px 18px !important;
     border: 1.5px solid black !important;
     border-radius: 0px !important;
     background: white !important;
     box-shadow: none !important;
-    page-break-after: avoid !important;
     page-break-inside: avoid !important;
+    page-break-after: avoid !important;
+    break-inside: avoid !important;
+    break-after: avoid !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
   }
 
   #voucher-card {
@@ -124,14 +131,19 @@ body {
     top: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
+    max-height: 275mm !important;
     margin: 0 !important;
-    padding: 16px 20px !important;
+    padding: 14px 18px !important;
     border: 1.5px solid #cbd5e1 !important;
     border-radius: 0px !important;
     background: white !important;
     box-shadow: none !important;
-    page-break-after: avoid !important;
     page-break-inside: avoid !important;
+    page-break-after: avoid !important;
+    break-inside: avoid !important;
+    break-after: avoid !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
   }
 }
 

@@ -272,9 +272,9 @@ export default function ReceiptViewPage() {
                 </tr>
               )}
 
-              {/* Empty padding rows to maintain visual height */}
-              {Array.from({ length: emptyRowsCount }).map((_, i) => (
-                <tr key={`empty-${i}`} className="border-b border-black/20 text-xs h-8">
+              {/* Empty padding rows to maintain visual height (2 rows for compact A4 fit) */}
+              {Array.from({ length: Math.min(2, Math.max(0, 3 - items.length)) }).map((_, i) => (
+                <tr key={`empty-${i}`} className="border-b border-black/20 text-xs h-6">
                   <td className="border-r border-black"></td>
                   <td className="border-r border-black"></td>
                   <td className="border-r border-black"></td>
@@ -288,15 +288,15 @@ export default function ReceiptViewPage() {
               {/* Subtotal & Discount rows */}
               <tr className="border-t border-black text-xs">
                 <td colSpan={5} rowSpan={2} className="border-r border-black align-top p-0"></td>
-                <td className="py-1.5 px-3 border-r border-black text-center font-bold">รวม</td>
-                <td className="py-1.5 px-3 text-right font-medium">
+                <td className="py-1 px-3 border-r border-black text-center font-bold">รวม</td>
+                <td className="py-1 px-3 text-right font-medium">
                   {subtotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                 </td>
               </tr>
 
               <tr className="border-t border-black text-xs">
-                <td className="py-1.5 px-3 border-r border-black text-center font-bold">ส่วนลด</td>
-                <td className="py-1.5 px-3 text-right font-medium">
+                <td className="py-1 px-3 border-r border-black text-center font-bold">ส่วนลด</td>
+                <td className="py-1 px-3 text-right font-medium">
                   {discount > 0
                     ? discount.toLocaleString('th-TH', { minimumFractionDigits: 2 })
                     : '-'}
@@ -305,13 +305,13 @@ export default function ReceiptViewPage() {
 
               {/* Grand Total & Thai Baht Text row */}
               <tr className="border-t-2 border-black font-bold text-xs bg-slate-100/70">
-                <td colSpan={5} className="py-2.5 px-4 border-r border-black text-center text-sm">
+                <td colSpan={5} className="py-2 px-4 border-r border-black text-center text-sm">
                   {thaiBahtText(totalAmount)}
                 </td>
-                <td className="py-2.5 px-3 border-r border-black text-center font-bold text-xs whitespace-nowrap">
+                <td className="py-2 px-3 border-r border-black text-center font-bold text-xs whitespace-nowrap">
                   รวมยอดเงินสุทธิ
                 </td>
-                <td className="py-2.5 px-3 text-right font-black text-sm">
+                <td className="py-2 px-3 text-right font-black text-sm">
                   {totalAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                 </td>
               </tr>
@@ -320,14 +320,14 @@ export default function ReceiptViewPage() {
         </div>
 
         {/* Footer Signature Box */}
-        <div className="mt-10 grid grid-cols-2 text-xs pt-4">
+        <div className="mt-6 print:mt-5 grid grid-cols-2 text-xs pt-2">
           <div>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[10px] text-slate-500">
               * เอกสารนี้ออกโดยระบบอิเล็กทรอนิกส์ของรีสอร์ท
             </p>
           </div>
-          <div className="text-center space-y-8 ml-auto w-48">
-            <p className="font-bold">ผู้รับเงิน / ผู้มีอำนาจลงนาม</p>
+          <div className="text-center space-y-6 print:space-y-4 ml-auto w-48">
+            <p className="font-bold text-xs">ผู้รับเงิน / ผู้มีอำนาจลงนาม</p>
             <div className="border-b border-black"></div>
             <p className="text-[11px] font-semibold text-slate-700">
               ({receipt.issuer?.full_name || settings?.resort_name || 'สมบัติ รีสอร์ท'})
