@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Booking, Settings } from '@/types/database';
 import { formatCurrency, formatDateThai, formatDateTime, formatPhone } from '@/lib/formatters';
 import { generateBookingVoucherPdf } from '@/lib/pdf-generator';
@@ -19,10 +19,12 @@ import {
   ChevronRight,
   ShieldCheck,
   Receipt as ReceiptIcon,
+  Search,
 } from 'lucide-react';
 
 export default function BookingDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
 
   const [booking, setBooking] = useState<Booking | null>(null);
@@ -31,9 +33,12 @@ export default function BookingDetailPage() {
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || id === 'undefined' || id === 'null' || id === 'bookings') {
+      router.replace('/bookings');
+      return;
+    }
 
-    fetch(`/api/bookings/${id}`)
+    fetch(`/api/bookings/${id}`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((d) => {
         if (d.success && d.booking) {
@@ -47,7 +52,7 @@ export default function BookingDetailPage() {
       .then((r) => r.json())
       .then((d) => d.success && setSettings(d.settings))
       .catch(() => {});
-  }, [id]);
+  }, [id, router]);
 
   const handleDownloadPdf = () => {
     if (!booking || !settings) return;
@@ -68,7 +73,7 @@ export default function BookingDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-16 text-center">
+      <div className="max-w-3xl mx-auto px-4 py-20 text-center">
         <div className="animate-spin w-8 h-8 border-4 border-resort-600 border-t-transparent rounded-full mx-auto" />
         <p className="text-sm text-slate-500 mt-4">กำลังโหลดใบยืนยันการจอง...</p>
       </div>
@@ -77,16 +82,31 @@ export default function BookingDetailPage() {
 
   if (!booking) {
     return (
-      <div className="max-w-xl mx-auto px-4 py-16 text-center bg-white rounded-2xl border border-slate-200 mt-8 shadow-sm">
-        <AlertCircle className="w-12 h-12 text-red-500 mx-auto" />
-        <h2 className="text-lg font-bold text-slate-800 mt-3">ไม่พบข้อมูลการจอง</h2>
-        <p className="text-xs text-slate-500 mt-1">รหัสการจองอาจไม่ถูกต้อง หรือถูกลบออกจากระบบแล้ว</p>
-        <Link
-          href="/bookings"
-          className="inline-block mt-4 px-4 py-2 bg-resort-600 text-white rounded-xl text-xs font-bold"
-        >
-          กลับหน้ารายการจอง
-        </Link>
+      <div className="max-w-xl mx-auto px-4 py-16 text-center bg-white rounded-3xl border border-slate-200 mt-8 shadow-sm space-y-4">
+        <div className="w-16 h-16 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto text-2xl">
+          <AlertCircle className="w-8 h-8" />
+        </div>
+        <div>
+          <h2 className="text-lg font-bold text-slate-800">ไม่พบข้อมูลการจองนี้</h2>
+          <p className="text-xs text-slate-500 mt-1">
+            รหัสการจองอาจไม่ถูกต้อง หรือคุณยังไม่ได้ทำการจองห้องพักในระบบ
+          </p>
+        </div>
+        <div className="flex items-center justify-center gap-3 pt-2">
+          <Link
+            href="/bookings"
+            className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors"
+          >
+            ดูการจองทั้งหมดของฉัน
+          </Link>
+          <Link
+            href="/"
+            className="px-5 py-2.5 bg-resort-700 hover:bg-resort-800 text-white rounded-xl text-xs font-bold shadow-md transition-colors flex items-center gap-1"
+          >
+            <Search className="w-3.5 h-3.5" />
+            <span>ค้นหาและจองห้องพัก</span>
+          </Link>
+        </div>
       </div>
     );
   }
@@ -146,7 +166,7 @@ export default function BookingDetailPage() {
             </div>
             <div>
               <h2 className="text-xl font-bold text-slate-900">
-                {settings?.resort_name || 'Paradise Resort & Spa'}
+                {settings?.resort_name || 'สมบัติ รีสอร์ท'}
               </h2>
               <p className="text-xs text-slate-500">
                 {settings?.address} • โทร: {settings?.phone}
@@ -202,8 +222,8 @@ export default function BookingDetailPage() {
             <div className="font-bold text-resort-700 uppercase tracking-wider text-[11px]">
               รายละเอียดการเข้าพัก (Stay Details)
             </div>
-            <div><span className="text-slate-500">วันเช็คอิน:</span> <span className="font-semibold text-slate-800">{formatDateThai(booking.check_in_date)} ({settings?.check_in_time || '14:00'} น.)</span></div>
-            <div><span className="text-slate-500">วันเช็คเอาท์:</span> <span className="font-semibold text-slate-800">{formatDateThai(booking.check_out_date)} ({settings?.check_out_time || '12:00'} น.)</span></div>
+            <div><span className="text-slate-500">วันเช็คอิน:</span> <span className="font-semibold text-slate-800">{formatDateThai(booking.check_in_date)} ({settings?.check_in_time ? settings.check_in_time.slice(0, 5) : '14:00'} น.)</span></div>
+            <div><span className="text-slate-500">วันเช็คเอาท์:</span> <span className="font-semibold text-slate-800">{formatDateThai(booking.check_out_date)} ({settings?.check_out_time ? settings.check_out_time.slice(0, 5) : '12:00'} น.)</span></div>
             <div><span className="text-slate-500">ระยะเวลา:</span> <span className="font-bold text-resort-700">{booking.total_nights} คืน</span></div>
           </div>
         </div>
