@@ -4,7 +4,17 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { Room, Promotion } from '@/types/database';
 import { formatCurrency, calculateNights } from '@/lib/formatters';
-import { Users, Wifi, Wind, Coffee, Sparkles, ChevronRight, CheckCircle2, ChevronLeft } from 'lucide-react';
+import {
+  Users,
+  Wifi,
+  Wind,
+  Coffee,
+  Sparkles,
+  ChevronRight,
+  CheckCircle2,
+  ChevronLeft,
+  Camera,
+} from 'lucide-react';
 
 interface RoomWithPricing extends Room {
   pricing?: {
@@ -65,20 +75,23 @@ export function RoomCard({ room, checkIn, checkOut, guests }: RoomCardProps) {
   };
 
   const checkoutUrl = `/checkout?roomId=${room.id}&checkIn=${checkIn}&checkOut=${checkOut}&guests=${guests}`;
+  const detailUrl = `/rooms/${room.id}?checkIn=${checkIn}&checkOut=${checkOut}&guests=${guests}`;
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col md:flex-row group">
       {/* Image Carousel Section */}
-      <div className="relative md:w-2/5 h-56 md:h-auto min-h-[220px] bg-slate-100 overflow-hidden flex-shrink-0">
-        <img
-          src={images[currentImageIndex]}
-          alt={room.room_name}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
+      <div className="relative md:w-2/5 h-60 md:h-auto min-h-[240px] bg-slate-100 overflow-hidden flex-shrink-0">
+        <Link href={detailUrl} className="block w-full h-full">
+          <img
+            src={images[currentImageIndex]}
+            alt={room.room_name}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        </Link>
 
         {/* Promotion Badge Overlay */}
         {pricing?.hasDiscount && pricing.appliedPromotion && (
-          <div className="absolute top-3 left-3 bg-red-600 text-white text-[11px] font-extrabold px-2.5 py-1 rounded-full shadow-lg flex items-center gap-1 uppercase tracking-wider animate-pulse">
+          <div className="absolute top-3 left-3 bg-red-600 text-white text-[11px] font-extrabold px-2.5 py-1 rounded-full shadow-lg flex items-center gap-1 uppercase tracking-wider animate-pulse pointer-events-none">
             <Sparkles className="w-3 h-3" />
             <span>
               {pricing.appliedPromotion.discount_type === 'PERCENTAGE'
@@ -88,32 +101,42 @@ export function RoomCard({ room, checkIn, checkOut, guests }: RoomCardProps) {
           </div>
         )}
 
-        {/* Room Number Badge */}
-        <div className="absolute top-3 right-3 bg-slate-900/80 backdrop-blur text-white text-xs font-bold px-2.5 py-1 rounded-lg">
-          ห้อง {room.room_number}
+        {/* Room Number Badge & Photo Count Badge */}
+        <div className="absolute top-3 right-3 flex items-center gap-1.5 pointer-events-none">
+          {images.length > 1 && (
+            <div className="bg-black/60 backdrop-blur text-white text-[11px] font-bold px-2 py-1 rounded-lg flex items-center gap-1">
+              <Camera className="w-3 h-3" />
+              <span>{currentImageIndex + 1}/{images.length}</span>
+            </div>
+          )}
+          <div className="bg-slate-900/85 backdrop-blur text-white text-xs font-bold px-2.5 py-1 rounded-lg shadow-sm">
+            ห้อง {room.room_number}
+          </div>
         </div>
 
-        {/* Navigation Arrows */}
+        {/* Navigation Arrows for Multi-Images */}
         {images.length > 1 && (
           <>
             <button
               onClick={prevImage}
-              className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center transition-opacity opacity-0 group-hover:opacity-100"
+              aria-label="Previous photo"
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 hover:bg-black/90 text-white flex items-center justify-center transition-all opacity-80 hover:opacity-100 shadow-md z-10"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-5 h-5" />
             </button>
             <button
               onClick={nextImage}
-              className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center transition-opacity opacity-0 group-hover:opacity-100"
+              aria-label="Next photo"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 hover:bg-black/90 text-white flex items-center justify-center transition-all opacity-80 hover:opacity-100 shadow-md z-10"
             >
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-5 h-5" />
             </button>
-            <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex space-x-1">
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex space-x-1.5 z-10 pointer-events-none">
               {images.map((_, i) => (
                 <div
                   key={i}
-                  className={`w-1.5 h-1.5 rounded-full transition-all ${
-                    i === currentImageIndex ? 'bg-white w-4' : 'bg-white/60'
+                  className={`h-1.5 rounded-full transition-all ${
+                    i === currentImageIndex ? 'bg-white w-4' : 'bg-white/50 w-1.5'
                   }`}
                 />
               ))}
@@ -131,9 +154,11 @@ export function RoomCard({ room, checkIn, checkOut, guests }: RoomCardProps) {
               <span className="text-[11px] font-semibold text-resort-600 uppercase tracking-wider bg-resort-50 px-2 py-0.5 rounded-md inline-block mb-1">
                 {room.room_type?.name || 'Standard Room'}
               </span>
-              <h3 className="text-lg font-bold text-slate-900 leading-snug group-hover:text-resort-700 transition-colors">
-                {room.room_name}
-              </h3>
+              <Link href={detailUrl}>
+                <h3 className="text-lg font-bold text-slate-900 leading-snug group-hover:text-resort-700 transition-colors">
+                  {room.room_name}
+                </h3>
+              </Link>
             </div>
             <div className="flex items-center gap-1 text-slate-600 text-xs font-semibold bg-slate-100 px-2 py-1 rounded-md flex-shrink-0">
               <Users className="w-3.5 h-3.5 text-slate-500" />
