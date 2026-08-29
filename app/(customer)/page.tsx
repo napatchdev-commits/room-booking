@@ -32,7 +32,7 @@ function HomeContent() {
     setIsLoading(true);
     setErrorMsg(null);
     try {
-      const res = await fetch(`/api/rooms/available?checkIn=${cIn}&checkOut=${cOut}&guests=${g}`);
+      const res = await fetch(`/api/rooms/available?checkIn=${cIn}&checkOut=${cOut}&guests=${g}`, { cache: 'no-store' });
       const data = await res.json();
       if (data.success) {
         setRooms(data.rooms || []);
@@ -49,12 +49,12 @@ function HomeContent() {
 
   // Fetch resort settings & active promotions
   useEffect(() => {
-    fetch('/api/settings')
+    fetch('/api/settings', { cache: 'no-store' })
       .then((r) => r.json())
       .then((d) => d.success && setSettings(d.settings))
       .catch(() => {});
 
-    fetch('/api/promotions?activeOnly=true')
+    fetch('/api/promotions?activeOnly=true', { cache: 'no-store' })
       .then((r) => r.json())
       .then((d) => d.success && setPromotions(d.promotions))
       .catch(() => {});

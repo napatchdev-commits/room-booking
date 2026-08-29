@@ -1,15 +1,15 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { RoomCard } from '@/components/ui/RoomCard';
 import { AgodaSearchBar } from '@/components/ui/AgodaSearchBar';
 import { Room, RoomType } from '@/types/database';
-import { BedDouble, Filter } from 'lucide-react';
+import { BedDouble } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 
 export default function RoomsCatalogPage() {
   const todayStr = format(new Date(), 'yyyy-MM-dd');
-  const defaultCheckOut = format(addDays(new Date(), 2), 'yyyy-MM-dd');
+  const defaultCheckOut = format(addDays(new Date(), 1), 'yyyy-MM-dd');
 
   const [checkIn, setCheckIn] = useState(todayStr);
   const [checkOut, setCheckOut] = useState(defaultCheckOut);
@@ -20,14 +20,14 @@ export default function RoomsCatalogPage() {
   const [selectedType, setSelectedType] = useState<string>('ALL');
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchRooms = async (cIn: string, cOut: string, g: number, typeId?: string) => {
+  const fetchRooms = useCallback(async (cIn: string, cOut: string, g: number, typeId?: string) => {
     setIsLoading(true);
     try {
       let url = `/api/rooms/available?checkIn=${cIn}&checkOut=${cOut}&guests=${g}`;
       if (typeId && typeId !== 'ALL') {
         url += `&roomTypeId=${typeId}`;
       }
-      const res = await fetch(url);
+      const res = await fetch(url, { cache: 'no-store' });
       const data = await res.json();
       if (data.success) {
         setRooms(data.rooms || []);
@@ -37,16 +37,18 @@ export default function RoomsCatalogPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetch('/api/room-types')
+    fetch('/api/room-types', { cache: 'no-store' })
       .then((r) => r.json())
       .then((d) => d.success && setRoomTypes(d.roomTypes || []))
       .catch(() => {});
+  }, []);
 
+  useEffect(() => {
     fetchRooms(checkIn, checkOut, guests, selectedType);
-  }, [checkIn, checkOut, guests, selectedType]);
+  }, [checkIn, checkOut, guests, selectedType, fetchRooms]);
 
   const handleSearch = (params: { checkIn: string; checkOut: string; guests: number }) => {
     setCheckIn(params.checkIn);
@@ -87,7 +89,7 @@ export default function RoomsCatalogPage() {
                 : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
             }`}
           >
-            ทั้งหมด ({rooms.length})
+            ทั้งหมด ({selectedType === 'ALL' ? rooms.length : 'ทั้งหมด'})
           </button>
           {roomTypes.map((type) => (
             <button
@@ -109,7 +111,7 @@ export default function RoomsCatalogPage() {
       {isLoading ? (
         <div className="space-y-4 py-8">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-56 bg-slate-200 animate-pulse rounded-2xl" />
+            <div key={i} className="h-60 bg-slate-200 animate-pulse rounded-2xl" />
           ))}
         </div>
       ) : rooms.length === 0 ? (

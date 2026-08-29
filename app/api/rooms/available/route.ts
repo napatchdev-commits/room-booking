@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
+
 import { calculateNights } from '@/lib/formatters';
 import { calculatePromotionDiscount } from '@/lib/pricing';
 import { Promotion, Room } from '@/types/database';
@@ -66,7 +69,13 @@ export async function GET(req: NextRequest) {
 
     if (roomErr) {
       console.error('Error fetching rooms:', roomErr);
-      return NextResponse.json({ error: roomErr.message || 'Failed to fetch rooms' }, { status: 500 });
+      return NextResponse.json(
+        { error: roomErr.message || 'Failed to fetch rooms' },
+        {
+          status: 500,
+          headers: { 'Cache-Control': 'no-store, max-age=0' },
+        }
+      );
     }
 
     // 4. Filter in JavaScript for bulletproof reliability
@@ -135,17 +144,32 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    return NextResponse.json({
-      success: true,
-      checkIn,
-      checkOut,
-      nights: validNights,
-      guests,
-      count: roomsWithPricing.length,
-      rooms: roomsWithPricing,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        checkIn,
+        checkOut,
+        nights: validNights,
+        guests,
+        count: roomsWithPricing.length,
+        rooms: roomsWithPricing,
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        },
+      }
+    );
   } catch (error: any) {
     console.error('Available rooms error:', error);
-    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || 'Internal server error' },
+      {
+        status: 500,
+        headers: { 'Cache-Control': 'no-store, max-age=0' },
+      }
+    );
   }
 }
