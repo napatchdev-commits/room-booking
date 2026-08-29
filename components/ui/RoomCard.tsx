@@ -187,29 +187,26 @@ export function RoomCard({ room, checkIn, checkOut, guests }: RoomCardProps) {
           </div>
         </div>
 
-        {/* Pricing & Booking Footer (Agoda Style) */}
+        {/* Pricing & Booking Footer */}
         <div className="mt-4 pt-3.5 border-t border-slate-100 flex flex-col sm:flex-row items-end sm:items-center justify-between gap-3">
           <div>
-            <div className="text-[11px] text-slate-400 font-medium">ราคาสำหรับ {nights} คืน ({formatCurrency(originalRate)}/คืน)</div>
-            <div className="flex items-baseline gap-2">
+            <div className="text-[11px] text-slate-400 font-medium">ราคาห้องพัก</div>
+            <div className="flex items-baseline gap-1.5">
               {pricing?.hasDiscount && (
                 <span className="text-xs text-slate-400 line-through font-semibold">
                   {formatCurrency(originalRate)}
                 </span>
               )}
-              <span className="text-xl font-extrabold text-resort-700">
+              <span className="text-2xl font-extrabold text-resort-700">
                 {formatCurrency(discountedRate)}
               </span>
-              <span className="text-xs text-slate-500 font-medium">/คืน</span>
-            </div>
-            <div className="text-xs text-slate-600 font-medium">
-              ยอดรวม: <span className="font-extrabold text-slate-900 text-sm">{formatCurrency(totalAmount)}</span>
+              <span className="text-xs text-slate-500 font-semibold">/ คืน</span>
             </div>
           </div>
 
           <Link
             href={checkoutUrl}
-            className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-resort-600 to-resort-700 hover:from-resort-700 hover:to-resort-800 text-white text-sm font-bold rounded-xl shadow-md shadow-resort-600/20 hover:shadow-lg transition-all flex items-center justify-center gap-1.5"
+            className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-resort-600 to-resort-700 hover:from-resort-700 hover:to-resort-800 text-white text-sm font-bold rounded-xl shadow-md shadow-resort-600/20 hover:shadow-lg transition-all flex items-center justify-center gap-1.5"
           >
             <span>จองห้องนี้</span>
             <ChevronRight className="w-4 h-4" />

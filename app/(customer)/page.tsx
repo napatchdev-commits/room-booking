@@ -14,7 +14,7 @@ function HomeContent() {
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const initialCheckIn = searchParams.get('checkIn') || todayStr;
-  const initialCheckOut = searchParams.get('checkOut') || format(addDays(new Date(), 2), 'yyyy-MM-dd');
+  const initialCheckOut = searchParams.get('checkOut') || format(addDays(new Date(), 1), 'yyyy-MM-dd');
   const initialGuests = parseInt(searchParams.get('guests') || '2', 10);
 
   const [checkIn, setCheckIn] = useState(initialCheckIn);
