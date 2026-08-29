@@ -33,6 +33,9 @@ export interface Settings {
   email: string;
   line_id?: string;
   line_liff_id?: string;
+  line_channel_access_token?: string;
+  line_admin_user_id?: string;
+  line_notify_token?: string;
   logo_url?: string;
   tax_id?: string;
   bank_accounts: BankAccount[];

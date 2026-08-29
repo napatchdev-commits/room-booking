@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 import { calculateNights } from '@/lib/formatters';
 import { calculatePromotionDiscount } from '@/lib/pricing';
 import { logAuditEvent } from '@/lib/audit';
+import { sendLineAdminNotification } from '@/lib/line-notify';
 import { Promotion, Room } from '@/types/database';
 
 export async function GET(req: NextRequest) {
@@ -256,7 +257,15 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // 10. Return full booking
+    // 10. Send LINE Admin Notification
+    try {
+      const lineMsg = `🔔 มีรายการจองห้องพักใหม่!\n\n📋 เลขที่ใบจอง: ${bookingNumber}\n🏨 ห้อง: ${room.room_name} (${room.room_number})\n👤 ผู้จอง: ${customerName || 'ลูกค้า'}\n📞 โทร: ${customerPhone || '-'}\n📅 เข้าพัก: ${checkInDate} ถึง ${checkOutDate} (${totalNights} คืน)\n👥 จำนวนผู้เข้าพัก: ${numGuests} ท่าน\n💰 ยอดสุทธิ: ฿${netTotal.toLocaleString('th-TH')}\n\n👉 ดูรายละเอียด: https://room-booking-eta-ten.vercel.app/admin/bookings`;
+      sendLineAdminNotification(lineMsg).catch(() => {});
+    } catch {
+      // ignore
+    }
+
+    // 11. Return full booking
     const { data: completeBooking } = await supabase
       .from('bookings')
       .select(`

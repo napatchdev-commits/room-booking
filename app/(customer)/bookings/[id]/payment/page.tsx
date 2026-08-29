@@ -180,74 +180,24 @@ export default function BookingPaymentPage() {
       )}
 
       <form onSubmit={handleSubmitPayment} className="space-y-6">
-        {/* Step 1: Select Payment Amount */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3">
-          <h2 className="text-sm font-bold text-slate-900">
-            1. เลือกยอดที่ต้องการชำระ
+        {/* Step 1: Full Payment Summary */}
+        <div className="bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-6 shadow-sm space-y-3">
+          <h2 className="text-sm font-bold text-slate-900 flex items-center justify-between border-b border-slate-100 pb-3">
+            <span>1. ยอดที่ต้องชำระ (ชำระยอดเต็มจำนวน)</span>
+            <span className="text-xs font-semibold text-resort-600 bg-resort-50 px-2.5 py-1 rounded-full border border-resort-200">
+              ชำระยอดเต็ม 100%
+            </span>
           </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {/* Full Amount */}
-            <div
-              onClick={() => setPaymentOption('FULL')}
-              className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${
-                paymentOption === 'FULL'
-                  ? 'border-resort-600 bg-resort-50/50'
-                  : 'border-slate-200 hover:border-slate-300'
-              }`}
-            >
-              <div className="text-xs font-semibold text-slate-600">ชำระเต็มจำนวน</div>
-              <div className="text-base font-extrabold text-slate-900 mt-1">
-                {formatCurrency(remainingBalance)}
-              </div>
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-resort-50/80 to-white border-2 border-resort-600/30 flex items-center justify-between">
+            <div>
+              <div className="text-xs font-bold text-slate-700">ยอดชำระค่าห้องพักสุทธิ</div>
+              <div className="text-[11px] text-slate-500 mt-0.5">รวมภาษีและค่าบริการทั้งหมดแล้ว</div>
             </div>
-
-            {/* Deposit 50% */}
-            {deposit50 < remainingBalance && (
-              <div
-                onClick={() => setPaymentOption('DEPOSIT')}
-                className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${
-                  paymentOption === 'DEPOSIT'
-                    ? 'border-resort-600 bg-resort-50/50'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                <div className="text-xs font-semibold text-slate-600">มัดจำ 50%</div>
-                <div className="text-base font-extrabold text-slate-900 mt-1">
-                  {formatCurrency(deposit50)}
-                </div>
-              </div>
-            )}
-
-            {/* Custom Amount */}
-            <div
-              onClick={() => setPaymentOption('CUSTOM')}
-              className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${
-                paymentOption === 'CUSTOM'
-                  ? 'border-resort-600 bg-resort-50/50'
-                  : 'border-slate-200 hover:border-slate-300'
-              }`}
-            >
-              <div className="text-xs font-semibold text-slate-600">ระบุยอดเอง</div>
-              <div className="text-xs font-bold text-slate-700 mt-1">แบ่งชำระเป็นงวด</div>
+            <div className="text-2xl sm:text-3xl font-black text-resort-700">
+              {formatCurrency(remainingBalance)}
             </div>
           </div>
-
-          {paymentOption === 'CUSTOM' && (
-            <div className="mt-3">
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
-                ระบุจำนวนเงินที่ต้องการชำระ (บาท)
-              </label>
-              <input
-                type="number"
-                min={1}
-                max={remainingBalance}
-                value={customAmount}
-                onChange={(e) => setCustomAmount(Number(e.target.value))}
-                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800"
-              />
-            </div>
-          )}
         </div>
 
         {/* Step 2: Resort Bank Account / PromptPay QR */}

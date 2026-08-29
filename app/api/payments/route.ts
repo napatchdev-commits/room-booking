@@ -3,6 +3,7 @@ import { getAdminClient } from '@/lib/supabase/admin';
 
 export const dynamic = 'force-dynamic';
 import { logAuditEvent } from '@/lib/audit';
+import { sendLineAdminNotification } from '@/lib/line-notify';
 
 export async function GET(req: NextRequest) {
   try {
@@ -98,6 +99,14 @@ export async function POST(req: NextRequest) {
         has_slip: Boolean(slipUrl),
       },
     });
+
+    // Send LINE Admin Notification
+    try {
+      const lineMsg = `💳 มีการแจ้งชำระเงิน / แนบสลิปใหม่!\n\n📋 เลขที่ใบจอง: ${booking.booking_number}\n👤 ผู้ชำระ: ${actorName || 'ลูกค้า'}\n💰 ยอดเงินโอน: ฿${paymentAmount.toLocaleString('th-TH')}\n🏦 วิธีการชำระ: ${paymentMethod}\n📸 แนบสลิป: ${slipUrl ? 'มีแนบรูปสลิปเรียบร้อย' : 'ไม่มี'}\n\n👉 ตรวจสอบสลิป & ออกใบเสร็จ: https://room-booking-eta-ten.vercel.app/admin/payments`;
+      sendLineAdminNotification(lineMsg).catch(() => {});
+    } catch {
+      // ignore
+    }
 
     return NextResponse.json({ success: true, payment });
   } catch (error) {
