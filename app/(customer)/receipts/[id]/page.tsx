@@ -158,7 +158,7 @@ export default function CustomerReceiptDetailPage() {
         {/* Top Header Grid */}
         <div className="grid grid-cols-12 gap-2 pb-2">
           {/* Left: Resort Info with Official Logo 4151 */}
-          <div className="col-span-8 space-y-1">
+          <div className="col-span-7 space-y-1">
             <div className="flex items-center gap-3">
               <div className="w-16 h-14 flex items-center justify-center flex-shrink-0">
                 <img
@@ -191,27 +191,29 @@ export default function CustomerReceiptDetailPage() {
             <div className="w-full border-b border-black pt-1"></div>
           </div>
 
-          {/* Right: Original Badge & Receipt Number / Date */}
-          <div className="col-span-4 flex flex-col items-end justify-between">
+          {/* Right: Original Badge & Right-aligned Receipt Number / Date */}
+          <div className="col-span-5 flex flex-col items-end justify-between">
             {/* Boxed Original Badge */}
             <div className="border border-black px-6 py-1 text-center font-bold text-sm">
               ต้นฉบับ
             </div>
 
-            <div className="text-right space-y-0.5 mt-2 w-full">
+            <div className="text-right space-y-1 mt-2 w-full flex flex-col items-end">
               <div className="text-base font-bold tracking-wide">ใบเสร็จรับเงิน</div>
-              <div className="text-xs font-bold tracking-wider">RECEIPT</div>
-              <div className="pt-1 flex justify-between text-xs font-bold">
-                <span>เล่มที่</span>
-                <span>{bookNo}</span>
-              </div>
-              <div className="flex justify-between text-xs font-bold">
-                <span>เลขที่</span>
-                <span>{receipt.receipt_number}</span>
-              </div>
-              <div className="flex justify-between text-xs font-bold">
-                <span>วันที่</span>
-                <span>{formatDateThaiLong(receipt.issued_at)}</span>
+              <div className="text-xs font-bold tracking-wider text-slate-700">RECEIPT</div>
+              <div className="pt-1.5 space-y-0.5 text-xs font-bold w-full flex flex-col items-end">
+                <div className="flex items-center justify-end gap-3 text-right">
+                  <span className="text-slate-800">เล่มที่</span>
+                  <span className="min-w-[65px] text-right font-black">{bookNo}</span>
+                </div>
+                <div className="flex items-center justify-end gap-3 text-right">
+                  <span className="text-slate-800">เลขที่</span>
+                  <span className="min-w-[65px] text-right font-black text-black">{receipt.receipt_number}</span>
+                </div>
+                <div className="flex items-center justify-end gap-3 text-right">
+                  <span className="text-slate-800">วันที่</span>
+                  <span className="text-right font-black text-black">{formatDateThaiLong(receipt.issued_at)}</span>
+                </div>
               </div>
             </div>
           </div>
