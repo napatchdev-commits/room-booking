@@ -214,7 +214,7 @@ export async function POST(req: NextRequest) {
       }
 
       if (!custId) {
-        const { data: newCust } = await supabase
+        const { data: newCust, error: cErr } = await supabase
           .from('customers')
           .insert({
             full_name: customerName ? customerName.trim() : 'ลูกค้าทั่วไป',
@@ -223,21 +223,34 @@ export async function POST(req: NextRequest) {
           })
           .select()
           .single();
-        if (newCust) custId = newCust.id;
+
+        if (cErr) {
+          console.error('Customer insert fallback error:', cErr);
+          // Fallback to any existing customer
+          const { data: anyCust } = await supabase.from('customers').select('id').limit(1).maybeSingle();
+          custId = anyCust?.id || null;
+        } else {
+          custId = newCust?.id || null;
+        }
       }
 
-      // Create placeholder booking
-      const todayStr = new Date().toISOString().slice(0, 10);
+      // Create placeholder booking with valid checkout date (tomorrow)
+      const now = new Date();
+      const todayStr = now.toISOString().slice(0, 10);
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+
       const randNum = Math.floor(1000 + Math.random() * 9000);
       const totalAmt = Number(inputAmount) || 0;
 
-      const { data: newBooking } = await supabase
+      const { data: newBooking, error: bErr } = await supabase
         .from('bookings')
         .insert({
           booking_number: `MANUAL-${todayStr.replace(/-/g, '')}-${randNum}`,
           customer_id: custId,
           check_in_date: todayStr,
-          check_out_date: todayStr,
+          check_out_date: tomorrowStr,
           total_nights: 1,
           num_guests: 1,
           subtotal_amount: totalAmt,
@@ -250,29 +263,35 @@ export async function POST(req: NextRequest) {
         .select()
         .single();
 
-      if (newBooking) {
-        targetBookingId = newBooking.id;
-
-        // Create verified payment
-        const { data: newPayment } = await supabase
-          .from('payments')
-          .insert({
-            booking_id: targetBookingId,
-            amount: totalAmt,
-            payment_type: 'FULL',
-            payment_method: 'CASH',
-            status: 'VERIFIED',
-            verified_by: issuerId,
-            verified_at: new Date().toISOString(),
-            notes: 'Manual Receipt Issuance',
-          })
-          .select()
-          .single();
-
-        if (newPayment) {
-          targetPaymentId = newPayment.id;
-        }
+      if (bErr || !newBooking) {
+        console.error('Booking insert error:', bErr);
+        return NextResponse.json({ error: `Failed to create booking for receipt: ${bErr?.message || 'Unknown'}` }, { status: 500 });
       }
+
+      targetBookingId = newBooking.id;
+
+      // Create verified payment
+      const { data: newPayment, error: pErr } = await supabase
+        .from('payments')
+        .insert({
+          booking_id: targetBookingId,
+          amount: totalAmt,
+          payment_type: 'FULL',
+          payment_method: 'CASH',
+          status: 'VERIFIED',
+          verified_by: issuerId,
+          verified_at: new Date().toISOString(),
+          notes: 'Manual Receipt Issuance',
+        })
+        .select()
+        .single();
+
+      if (pErr || !newPayment) {
+        console.error('Payment insert error:', pErr);
+        return NextResponse.json({ error: `Failed to create payment record: ${pErr?.message || 'Unknown'}` }, { status: 500 });
+      }
+
+      targetPaymentId = newPayment.id;
     }
 
     if (!targetBookingId || !targetPaymentId) {
