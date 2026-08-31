@@ -38,15 +38,19 @@ export function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Brand Logo */}
           <Link href="/" className="flex items-center space-x-2.5">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-resort-700 to-resort-500 flex items-center justify-center text-white shadow-md shadow-resort-500/20">
-              <Building2 className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center p-1 shadow-sm overflow-hidden flex-shrink-0">
+              <img
+                src="/logo-sombat.png"
+                alt="SOMBAT RESORT"
+                className="w-full h-full object-contain"
+              />
             </div>
             <div>
-              <span className="text-lg font-bold text-slate-900 tracking-tight block leading-tight">
-                {settings?.resort_name || 'Paradise Resort'}
+              <span className="text-base sm:text-lg font-bold text-slate-900 tracking-tight block leading-tight">
+                {settings?.resort_name || 'สมบัติ รีสอร์ท'}
               </span>
-              <span className="text-[11px] text-resort-600 font-medium block">
-                {settings?.resort_name_en || 'Resort Room Booking'}
+              <span className="text-[10px] sm:text-[11px] text-resort-700 font-semibold block">
+                {settings?.resort_name_en || 'SOMBAT RESORT'}
               </span>
             </div>
           </Link>

@@ -73,7 +73,7 @@ function HomeContent() {
   return (
     <div className="space-y-8 md:space-y-12">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-b from-resort-900 via-resort-800 to-resort-700 text-white pt-10 pb-20 md:pb-28 px-4 overflow-hidden">
+      <section className="relative bg-gradient-to-b from-resort-900 via-resort-800 to-resort-700 text-white pt-8 pb-16 sm:pt-10 sm:pb-24 md:pb-28 px-3 sm:px-4 overflow-visible">
         {/* Decorative background image overlay */}
         <div
           className="absolute inset-0 opacity-20 bg-cover bg-center mix-blend-overlay"
@@ -82,22 +82,22 @@ function HomeContent() {
           }}
         />
 
-        <div className="relative max-w-5xl mx-auto text-center space-y-3 z-10">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur border border-white/20 text-xs font-semibold tracking-wide text-resort-200">
+        <div className="relative max-w-5xl mx-auto text-center space-y-2.5 z-10">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur border border-white/20 text-[11px] sm:text-xs font-semibold tracking-wide text-resort-200">
             <Palmtree className="w-3.5 h-3.5 text-resort-300" />
             <span>สัมผัสประสบการณ์พักผ่อนระดับพรีเมียม</span>
           </div>
 
-          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white leading-tight">
-            {settings?.resort_name || 'Paradise Resort & Spa'}
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-white leading-tight">
+            {settings?.resort_name || 'สมบัติ รีสอร์ท'}
           </h1>
-          <p className="text-sm sm:text-base text-resort-100/90 max-w-2xl mx-auto font-light">
+          <p className="text-xs sm:text-sm md:text-base text-resort-100/90 max-w-2xl mx-auto font-light">
             จองห้องพักง่าย สะดวกรวดเร็วผ่าน LINE พร้อมรับสิทธิประโยชน์และโปรโมชั่นส่วนลดพิเศษทันที
           </p>
         </div>
 
         {/* Floating Agoda Search Bar */}
-        <div className="relative -mb-28 md:-mb-36 mt-8 z-20 px-2 sm:px-4">
+        <div className="relative -mb-16 sm:-mb-20 md:-mb-24 mt-6 sm:mt-8 z-20 px-1 sm:px-4">
           <AgodaSearchBar
             initialCheckIn={checkIn}
             initialCheckOut={checkOut}
@@ -108,7 +108,7 @@ function HomeContent() {
       </section>
 
       {/* Main Content Area */}
-      <div id="rooms-section" className="max-w-6xl mx-auto px-4 pt-16 md:pt-20 space-y-10">
+      <div id="rooms-section" className="max-w-6xl mx-auto px-3 sm:px-4 pt-14 sm:pt-16 md:pt-20 space-y-8 sm:space-y-10">
         {/* Active Promotion Badges Banner */}
         {promotions.length > 0 && (
           <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-red-500/10 border border-orange-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
