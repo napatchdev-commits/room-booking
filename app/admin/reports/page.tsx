@@ -75,20 +75,27 @@ export default function AdminReportsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleExportBookings}
-            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5 transition-colors"
+        <div className="flex flex-wrap items-center gap-2">
+          <a
+            href="/admin/export"
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-1.5 transition-colors"
           >
             <FileSpreadsheet className="w-4 h-4" />
-            <span>Export Bookings (.xlsx)</span>
+            <span>📦 ศูนย์ Export ประจำเดือน</span>
+          </a>
+          <button
+            onClick={handleExportBookings}
+            className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl border border-slate-300 shadow-sm flex items-center gap-1.5 transition-colors"
+          >
+            <Download className="w-3.5 h-3.5 text-resort-600" />
+            <span>Export Bookings</span>
           </button>
           <button
             onClick={handleExportFinancial}
-            className="px-3.5 py-2 bg-resort-700 hover:bg-resort-800 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5 transition-colors"
+            className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl border border-slate-300 shadow-sm flex items-center gap-1.5 transition-colors"
           >
-            <Download className="w-4 h-4" />
-            <span>Export รายงานการเงิน (.xlsx)</span>
+            <Download className="w-3.5 h-3.5 text-resort-600" />
+            <span>Export สรุปการเงิน</span>
           </button>
         </div>
       </div>

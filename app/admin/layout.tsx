@@ -13,7 +13,7 @@ import {
   Receipt,
   Sparkles,
   BarChart3,
-  History,
+  FileSpreadsheet,
   Settings as SettingsIcon,
   Shield,
   ArrowLeft,
@@ -97,7 +97,7 @@ export default function AdminLayout({
     { href: '/admin/receipts', label: 'ใบเสร็จรับเงิน', icon: Receipt },
     { href: '/admin/promotions', label: 'โปรโมชั่น', icon: Sparkles },
     { href: '/admin/reports', label: 'รายงานและสถิติ', icon: BarChart3 },
-    { href: '/admin/audit-logs', label: 'Audit Logs', icon: History },
+    { href: '/admin/export', label: 'Export ข้อมูลรายเดือน', icon: FileSpreadsheet },
     { href: '/admin/settings', label: 'ตั้งค่ารีสอร์ท & LINE', icon: SettingsIcon },
   ];
 
