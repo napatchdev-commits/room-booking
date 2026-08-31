@@ -53,18 +53,23 @@ function CheckoutContent() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const hasInitializedRef = React.useRef(false);
 
-  // Auto-populate from LIFF profile
+  // Auto-populate from LIFF profile once on initial load (optional starting value, fully editable)
   useEffect(() => {
+    if (hasInitializedRef.current) return;
+
     if (customer) {
-      if (customer.full_name && !fullName) setFullName(customer.full_name);
-      if (customer.phone && !phone) setPhone(customer.phone);
-      if (customer.email && !email) setEmail(customer.email);
+      if (customer.full_name) setFullName(customer.full_name);
+      if (customer.phone) setPhone(customer.phone);
+      if (customer.email) setEmail(customer.email);
+      hasInitializedRef.current = true;
     } else if (profile) {
-      if (profile.displayName && !fullName) setFullName(profile.displayName);
-      if (profile.email && !email) setEmail(profile.email);
+      if (profile.displayName) setFullName(profile.displayName);
+      if (profile.email) setEmail(profile.email);
+      hasInitializedRef.current = true;
     }
-  }, [customer, profile, fullName, phone, email]);
+  }, [customer, profile]);
 
   // Fetch Room & Settings
   useEffect(() => {
@@ -268,14 +273,19 @@ function CheckoutContent() {
 
             <div className="space-y-3.5">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-resort-600" />
-                  <span>ชื่อ-นามสกุล ผู้เข้าพัก *</span>
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-resort-600" />
+                    <span>ชื่อ-นามสกุล ผู้เข้าพัก *</span>
+                  </label>
+                  <span className="text-[11px] text-slate-500 font-medium">
+                    (พิมพ์ชื่อจริงได้ ไม่จำเป็นต้องใช้ชื่อ LINE)
+                  </span>
+                </div>
                 <input
                   type="text"
                   required
-                  placeholder="เช่น คุณสมบัติ นามสกุล"
+                  placeholder="เช่น คุณสมบัติ สมใจดี (ระบุชื่อผู้เข้าพักจริง)"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-resort-500/20 focus:border-resort-500 outline-none"
