@@ -215,14 +215,21 @@ export default function BookingDetailPage() {
         {/* Resort Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-resort-700 text-white flex items-center justify-center font-bold text-xl shadow-md">
-              <Building2 className="w-6 h-6" />
+            <div className="w-14 h-12 bg-white rounded-xl border border-slate-200 flex items-center justify-center p-1 shadow-sm flex-shrink-0">
+              <img
+                src="/logo-sombat.png"
+                alt="SOMBAT RESORT"
+                className="w-full h-full object-contain"
+              />
             </div>
             <div>
               <h2 className="text-xl font-bold text-slate-900">
                 {settings?.resort_name || 'สมบัติ รีสอร์ท'}
               </h2>
-              <p className="text-xs text-slate-500">
+              <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block">
+                {settings?.resort_name_en || 'SOMBAT RESORT'}
+              </span>
+              <p className="text-xs text-slate-500 mt-0.5">
                 {settings?.address} • โทร: {settings?.phone}
               </p>
             </div>

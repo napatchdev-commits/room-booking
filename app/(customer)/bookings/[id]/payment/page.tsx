@@ -201,38 +201,53 @@ export default function BookingPaymentPage() {
         </div>
 
         {/* Step 2: Resort Bank Account / PromptPay QR */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
-          <h2 className="text-sm font-bold text-slate-900 flex items-center justify-between">
-            <span>2. ข้อมูลบัญชีสำหรับโอนเงิน</span>
+        <div className="bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-6 shadow-sm space-y-4">
+          <h2 className="text-sm font-bold text-slate-900 flex items-center justify-between border-b border-slate-100 pb-3">
+            <span>2. สแกน QR Code หรือโอนผ่านบัญชีธนาคาร</span>
             <span className="text-xs font-extrabold text-resort-700">
               ยอดโอน: {formatCurrency(getPayAmount())}
             </span>
           </h2>
 
-          <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 flex flex-col sm:flex-row items-center gap-4">
-            <div className="w-28 h-28 bg-white p-2 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center justify-center flex-shrink-0">
-              <QrCode className="w-20 h-20 text-slate-800" />
-              <span className="text-[9px] font-bold text-slate-500 mt-1">PromptPay QR</span>
+          <div className="bg-slate-50 rounded-2xl p-4 sm:p-5 border border-slate-200 flex flex-col sm:flex-row items-center gap-5">
+            {/* Real PromptPay QR Image from user upload */}
+            <div className="w-48 sm:w-52 bg-white p-3 rounded-2xl border border-slate-200 shadow-md flex flex-col items-center justify-center flex-shrink-0">
+              <img
+                src="/payment-qr.jpg"
+                alt="สแกน QR เพื่อชำระเงิน"
+                className="w-full h-auto object-contain rounded-xl"
+              />
+              <div className="mt-2 text-center">
+                <span className="text-[11px] font-extrabold text-slate-800 block">
+                  สแกน QR เพื่อชำระเงิน
+                </span>
+                <span className="text-[10px] text-slate-500 block">
+                  ยอด {formatCurrency(getPayAmount())}
+                </span>
+              </div>
             </div>
 
-            <div className="space-y-1.5 text-xs text-center sm:text-left">
-              <div className="font-bold text-slate-800 text-sm">{bankAccount.bank_name}</div>
+            <div className="space-y-2 text-xs text-center sm:text-left flex-1">
+              <div className="font-extrabold text-slate-900 text-sm">{bankAccount.bank_name}</div>
               <div>
                 <span className="text-slate-500">เลขที่บัญชี:</span>{' '}
-                <span className="font-extrabold text-slate-900 text-sm tracking-wide bg-white px-2 py-0.5 rounded border border-slate-200">
+                <span className="font-black text-slate-900 text-sm tracking-wide bg-white px-2.5 py-1 rounded-lg border border-slate-200 inline-block mt-0.5 select-all">
                   {bankAccount.account_number}
                 </span>
               </div>
               <div>
                 <span className="text-slate-500">ชื่อบัญชี:</span>{' '}
-                <span className="font-semibold text-slate-800">{bankAccount.account_name}</span>
+                <span className="font-bold text-slate-800">{bankAccount.account_name}</span>
               </div>
               {bankAccount.promptpay_id && (
                 <div>
                   <span className="text-slate-500">พร้อมเพย์:</span>{' '}
-                  <span className="font-semibold text-slate-800">{bankAccount.promptpay_id}</span>
+                  <span className="font-bold text-slate-800">{bankAccount.promptpay_id}</span>
                 </div>
               )}
+              <div className="pt-2 text-[11px] text-amber-800 bg-amber-50 p-2.5 rounded-xl border border-amber-200 leading-relaxed">
+                💡 สามารถแคปหน้าจอรูป QR Code หรือสแกนเพื่อโอนเงินผ่านแอปธนาคาร จากนั้นแนบรูปสลิปในขั้นตอนที่ 3 ด้านล่าง
+              </div>
             </div>
           </div>
         </div>
