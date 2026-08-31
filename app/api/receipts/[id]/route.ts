@@ -26,7 +26,22 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ error: 'Receipt not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, receipt });
+    let customDetails: any = null;
+    if (receipt.notes) {
+      try {
+        if (receipt.notes.startsWith('{') && receipt.notes.endsWith('}')) {
+          customDetails = JSON.parse(receipt.notes);
+        }
+      } catch {}
+    }
+
+    return NextResponse.json({
+      success: true,
+      receipt: {
+        ...receipt,
+        customDetails,
+      },
+    });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
   }
