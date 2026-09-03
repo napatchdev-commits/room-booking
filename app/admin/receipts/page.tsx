@@ -120,16 +120,20 @@ export default function AdminReceiptsPage() {
     fetchData();
   }, []);
 
-  // Load next sequential receipt number
-  const fetchNextReceiptNumber = async () => {
+  // Load next sequential receipt number based on year (e.g. SC26-001, SC27-001)
+  const fetchNextReceiptNumber = async (dateStr?: string) => {
     try {
-      const res = await fetch('/api/receipts?action=next-number');
+      const url = dateStr
+        ? `/api/receipts?action=next-number&date=${dateStr}`
+        : '/api/receipts?action=next-number';
+      const res = await fetch(url);
       const data = await res.json();
       if (data.success && data.nextReceiptNumber) {
         setReceiptNumber(data.nextReceiptNumber);
       }
     } catch {
-      setReceiptNumber('SC26-001');
+      const y = dateStr ? new Date(dateStr).getFullYear() : new Date().getFullYear();
+      setReceiptNumber(`SC${y.toString().slice(-2)}-001`);
     }
   };
 
@@ -588,10 +592,12 @@ export default function AdminReceiptsPage() {
                     required
                     value={receiptNumber}
                     onChange={(e) => setReceiptNumber(e.target.value)}
-                    placeholder="SC26-001"
+                    placeholder={`SC${new Date().getFullYear().toString().slice(-2)}-001`}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-resort-700"
                   />
-                  <span className="text-[10px] text-slate-400 mt-0.5 block">รันเลขอัตโนมัติ (เช่น SC26-001)</span>
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">
+                    รันเลขอัตโนมัติตามปี (เช่น SC{new Date().getFullYear().toString().slice(-2)}-001)
+                  </span>
                 </div>
 
                 <div>
@@ -611,7 +617,11 @@ export default function AdminReceiptsPage() {
                     type="date"
                     required
                     value={issuedAt}
-                    onChange={(e) => setIssuedAt(e.target.value)}
+                    onChange={(e) => {
+                      const newDate = e.target.value;
+                      setIssuedAt(newDate);
+                      fetchNextReceiptNumber(newDate);
+                    }}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800"
                   />
                 </div>

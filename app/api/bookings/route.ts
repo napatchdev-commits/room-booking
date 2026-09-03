@@ -8,10 +8,17 @@ import { logAuditEvent } from '@/lib/audit';
 import { sendLineAdminNotification } from '@/lib/line-notify';
 import { Promotion, Room } from '@/types/database';
 
-// Helper to generate next sequential receipt number (e.g. SC26-001)
-async function getNextReceiptNumber(): Promise<string> {
+// Helper to generate next sequential receipt number (e.g. SC26-001, SC27-001) based on year
+async function getNextReceiptNumber(dateInput?: string | Date): Promise<string> {
   const supabase = getAdminClient();
-  const yearSuffix = new Date().getFullYear().toString().slice(-2);
+  let fullYear = new Date().getFullYear();
+  if (dateInput) {
+    const d = new Date(dateInput);
+    if (!isNaN(d.getFullYear())) {
+      fullYear = d.getFullYear();
+    }
+  }
+  const yearSuffix = fullYear.toString().slice(-2);
   const prefix = `SC${yearSuffix}-`;
 
   const { data: receipts } = await supabase

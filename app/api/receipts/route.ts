@@ -6,10 +6,18 @@ import { checkRolePermission } from '@/lib/permissions';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-// Helper to generate next sequential receipt number (e.g. SC26-001)
-async function getNextReceiptNumber(): Promise<string> {
+// Helper to generate next sequential receipt number (e.g. SC26-001, SC27-001) based on year
+async function getNextReceiptNumber(dateInput?: string | Date): Promise<string> {
   const supabase = getAdminClient();
-  const yearSuffix = new Date().getFullYear().toString().slice(-2); // "26"
+  let fullYear = new Date().getFullYear();
+  if (dateInput) {
+    const d = new Date(dateInput);
+    if (!isNaN(d.getFullYear())) {
+      fullYear = d.getFullYear();
+    }
+  }
+  // Convert 4-digit Gregorian year e.g. 2026 -> "26", 2027 -> "27"
+  const yearSuffix = fullYear.toString().slice(-2);
   const prefix = `SC${yearSuffix}-`;
 
   const { data: receipts } = await supabase
@@ -44,9 +52,10 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get('status');
     const action = searchParams.get('action');
 
-    // Return next receipt number if requested
+    // Return next receipt number for the year if requested
     if (action === 'next-number') {
-      const nextReceiptNumber = await getNextReceiptNumber();
+      const dateParam = searchParams.get('date');
+      const nextReceiptNumber = await getNextReceiptNumber(dateParam || undefined);
       return NextResponse.json({ success: true, nextReceiptNumber });
     }
 
