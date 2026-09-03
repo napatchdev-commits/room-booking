@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Booking, UserRole } from '@/types/database';
 import { formatCurrency, formatDateThai, formatDateTime, formatPhone } from '@/lib/formatters';
 import { checkRolePermission } from '@/lib/permissions';
+import { WalkInModal } from '@/components/admin/WalkInModal';
 import {
   BookOpenCheck,
   Search,
@@ -17,6 +18,7 @@ import {
   DoorOpen,
   AlertCircle,
   Trash2,
+  UserCheck,
 } from 'lucide-react';
 
 export default function AdminBookingsPage() {
@@ -36,6 +38,9 @@ export default function AdminBookingsPage() {
   const [discountReason, setDiscountReason] = useState('');
   const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
   const [discountError, setDiscountError] = useState<string | null>(null);
+
+  // Walk-in Modal State
+  const [isWalkInModalOpen, setIsWalkInModalOpen] = useState(false);
 
   // Current Role
   const [currentRole, setCurrentRole] = useState<UserRole>('OWNER');
@@ -168,6 +173,16 @@ export default function AdminBookingsPage() {
             ตรวจสอบรายการจอง อัพเดทสถานะ เช็คอิน เช็คเอาท์ และให้ส่วนลดพิเศษ
           </p>
         </div>
+
+        <div>
+          <button
+            onClick={() => setIsWalkInModalOpen(true)}
+            className="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-bold rounded-2xl shadow-md shadow-emerald-700/20 hover:shadow-lg flex items-center gap-1.5 transition-all"
+          >
+            <UserCheck className="w-4 h-4" />
+            <span>+ รับลูกค้า Walk-in (หน้าร้าน)</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter and Search Bar */}
@@ -251,8 +266,13 @@ export default function AdminBookingsPage() {
                   const firstItem = booking.booking_items?.[0];
                   return (
                     <tr key={booking.id} className="hover:bg-slate-50">
-                      <td className="p-3 font-extrabold text-resort-700">
-                        {booking.booking_number}
+                      <td className="p-3">
+                        <div className="font-extrabold text-resort-700">{booking.booking_number}</div>
+                        {(booking.booking_number.startsWith('WLK-') || booking.notes?.includes('Walk-in')) && (
+                          <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-teal-100 text-teal-800 border border-teal-200">
+                            🚶 Walk-in
+                          </span>
+                        )}
                       </td>
                       <td className="p-3">
                         <div className="font-bold text-slate-800">{booking.customer?.full_name || '-'}</div>
@@ -512,6 +532,14 @@ export default function AdminBookingsPage() {
           </div>
         </div>
       )}
+      {/* Walk-in Modal */}
+      <WalkInModal
+        isOpen={isWalkInModalOpen}
+        onClose={() => setIsWalkInModalOpen(false)}
+        onSuccess={() => {
+          fetchBookings();
+        }}
+      />
     </div>
   );
 }

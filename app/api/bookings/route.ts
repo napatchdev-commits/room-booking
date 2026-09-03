@@ -2,11 +2,41 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 
 export const dynamic = 'force-dynamic';
-import { calculateNights } from '@/lib/formatters';
+import { calculateNights, thaiBahtText } from '@/lib/formatters';
 import { calculatePromotionDiscount } from '@/lib/pricing';
 import { logAuditEvent } from '@/lib/audit';
 import { sendLineAdminNotification } from '@/lib/line-notify';
 import { Promotion, Room } from '@/types/database';
+
+// Helper to generate next sequential receipt number (e.g. SC26-001)
+async function getNextReceiptNumber(): Promise<string> {
+  const supabase = getAdminClient();
+  const yearSuffix = new Date().getFullYear().toString().slice(-2);
+  const prefix = `SC${yearSuffix}-`;
+
+  const { data: receipts } = await supabase
+    .from('receipts')
+    .select('receipt_number')
+    .ilike('receipt_number', `${prefix}%`)
+    .order('created_at', { ascending: false })
+    .limit(100);
+
+  let maxSeq = 0;
+  if (receipts && receipts.length > 0) {
+    for (const r of receipts) {
+      const match = r.receipt_number.match(new RegExp(`^${prefix}(\\d+)`, 'i'));
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (!isNaN(num) && num > maxSeq) {
+          maxSeq = num;
+        }
+      }
+    }
+  }
+
+  const nextSeq = maxSeq + 1;
+  return `${prefix}${String(nextSeq).padStart(3, '0')}`;
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -65,6 +95,7 @@ export async function POST(req: NextRequest) {
       customerName,
       customerPhone,
       customerEmail,
+      customerTaxId,
       roomId,
       checkInDate,
       checkOutDate,
@@ -73,6 +104,16 @@ export async function POST(req: NextRequest) {
       notes,
       actorId,
       actorName,
+      // Walk-in parameters
+      isWalkIn = false,
+      status: requestedStatus,
+      customPricePerNight,
+      manualDiscount = 0,
+      paidAmount: rawPaidAmount = 0,
+      paymentMethod = 'CASH',
+      autoIssueReceipt = false,
+      issuerName = 'สมบัติ รีสอร์ท',
+      bookNo = '1',
     } = body;
 
     if (!roomId || !checkInDate || !checkOutDate) {
@@ -88,27 +129,35 @@ export async function POST(req: NextRequest) {
 
     // 1. Get/Create Customer
     let customerId = providedCustomerId;
+    const effectiveCustName = customerName || (isWalkIn ? 'ลูกค้า Walk-in' : 'ลูกค้าผู้เข้าพัก');
+    const effectiveCustPhone = customerPhone || (isWalkIn ? '080-000-0000' : '');
+
     if (!customerId) {
-      if (!customerName || !customerPhone) {
+      if (!customerPhone && !isWalkIn) {
         return NextResponse.json({ error: 'Customer Name and Phone are required' }, { status: 400 });
       }
 
       // Find or insert customer by phone
-      const { data: existingCustomer } = await supabase
-        .from('customers')
-        .select('id')
-        .eq('phone', customerPhone)
-        .maybeSingle();
+      if (effectiveCustPhone) {
+        const { data: existingCustomer } = await supabase
+          .from('customers')
+          .select('id')
+          .eq('phone', effectiveCustPhone)
+          .maybeSingle();
 
-      if (existingCustomer) {
-        customerId = existingCustomer.id;
-      } else {
+        if (existingCustomer) {
+          customerId = existingCustomer.id;
+        }
+      }
+
+      if (!customerId) {
         const { data: newCustomer, error: custErr } = await supabase
           .from('customers')
           .insert({
-            full_name: customerName,
-            phone: customerPhone,
+            full_name: effectiveCustName,
+            phone: effectiveCustPhone,
             email: customerEmail || null,
+            id_card: customerTaxId || null,
           })
           .select()
           .single();
@@ -132,7 +181,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (room.status === 'maintenance') {
-      return NextResponse.json({ error: 'This room is currently under maintenance' }, { status: 400 });
+      return NextResponse.json({ error: 'ห้องพักนี้อยู่ระหว่างการปรับปรุง/ซ่อมบำรุง' }, { status: 400 });
     }
 
     // 3. Collision Prevention: Check Overlapping Bookings
@@ -151,13 +200,16 @@ export async function POST(req: NextRequest) {
 
     if (conflicts && conflicts.length > 0) {
       return NextResponse.json(
-        { error: `Room ${room.room_number} is already booked for the selected dates (${checkInDate} to ${checkOutDate})` },
+        { error: `ห้อง ${room.room_number} ถูกจองเต็มแล้วสำหรับช่วงวันที่เลือก (${checkInDate} ถึง ${checkOutDate})` },
         { status: 409 }
       );
     }
 
     // 4. Server-Side Price Calculation
-    const pricePerNight = Number(room.price_per_night);
+    const pricePerNight = typeof customPricePerNight === 'number' && customPricePerNight >= 0
+      ? customPricePerNight
+      : Number(room.price_per_night);
+
     const subtotalAmount = Math.round(pricePerNight * totalNights * 100) / 100;
 
     // Check promotion if code provided or active
@@ -188,13 +240,19 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const netTotal = Math.max(0, Math.round((subtotalAmount - promoDiscountAmount) * 100) / 100);
-    const remainingBalance = netTotal;
+    const appliedManualDiscount = Number(manualDiscount) || 0;
+    const netTotal = Math.max(0, Math.round((subtotalAmount - promoDiscountAmount - appliedManualDiscount) * 100) / 100);
+
+    const paidAmount = Math.min(netTotal, Number(rawPaidAmount) || 0);
+    const remainingBalance = Math.max(0, Math.round((netTotal - paidAmount) * 100) / 100);
+
+    // Initial Status
+    const initialStatus = requestedStatus || (isWalkIn ? 'CHECKED_IN' : 'PENDING');
 
     // 5. Generate Booking Reference
-    const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const todayDigits = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const randSuffix = Math.floor(1000 + Math.random() * 9000);
-    const bookingNumber = `RES-${todayStr}-${randSuffix}`;
+    const bookingNumber = isWalkIn ? `WLK-${todayDigits}-${randSuffix}` : `RES-${todayDigits}-${randSuffix}`;
 
     // 6. Insert Booking Record
     const { data: booking, error: insertBookingErr } = await supabase
@@ -208,12 +266,12 @@ export async function POST(req: NextRequest) {
         num_guests: Number(numGuests || 1),
         subtotal_amount: subtotalAmount,
         promotion_discount: promoDiscountAmount,
-        manual_discount: 0,
+        manual_discount: appliedManualDiscount,
         net_total: netTotal,
-        paid_amount: 0,
+        paid_amount: paidAmount,
         remaining_balance: remainingBalance,
-        status: 'PENDING',
-        notes: notes || null,
+        status: initialStatus,
+        notes: notes || (isWalkIn ? 'ลูกค้า Walk-in เช็คอินหน้าร้าน' : null),
       })
       .select()
       .single();
@@ -247,31 +305,85 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 9. Audit Log
-    await logAuditEvent({
-      actorId: actorId || customerId,
-      actorName: actorName || customerName || 'Customer',
-      action: 'BOOKING_CREATE',
-      entity: 'booking',
-      entityId: booking.id,
-      detailsAfter: {
-        booking_number: bookingNumber,
-        room_number: room.room_number,
-        check_in: checkInDate,
-        check_out: checkOutDate,
-        net_total: netTotal,
-      },
-    });
+    // 9. If Payment received (e.g. Walk-in paid at desk)
+    let paymentRecord: any = null;
+    if (paidAmount > 0) {
+      const paymentType = paidAmount >= netTotal ? 'FULL' : 'DEPOSIT';
+      const { data: pData } = await supabase
+        .from('payments')
+        .insert({
+          booking_id: booking.id,
+          amount: paidAmount,
+          payment_type: paymentType,
+          payment_method: paymentMethod || 'CASH',
+          status: 'VERIFIED',
+          verified_at: new Date().toISOString(),
+          notes: isWalkIn ? 'ชำระเงินหน้าร้าน (Walk-in)' : 'ชำระเงินออนไลน์',
+        })
+        .select()
+        .single();
 
-    // 10. Send LINE Admin Notification
+      paymentRecord = pData;
+    }
+
+    // 10. Auto Issue Receipt if requested
+    let receiptRecord: any = null;
+    if (autoIssueReceipt && paidAmount > 0 && paymentRecord) {
+      try {
+        const nextReceiptNumber = await getNextReceiptNumber();
+        const customDetails = {
+          book_no: bookNo || '1',
+          customer_name: effectiveCustName,
+          customer_phone: effectiveCustPhone,
+          customer_tax_id: customerTaxId || '',
+          issuer_name: issuerName || 'สมบัติ รีสอร์ท',
+          notes: notes || `ค่าที่พักห้อง ${room.room_name} (${room.room_number})`,
+          items: [
+            {
+              description: `ค่าห้องพัก ${room.room_name} (${room.room_number}) ${checkInDate} ถึง ${checkOutDate}`,
+              quantity: totalNights,
+              unitPrice: pricePerNight,
+              total: paidAmount,
+            },
+          ],
+        };
+
+        const { data: recData } = await supabase
+          .from('receipts')
+          .insert({
+            receipt_number: nextReceiptNumber,
+            booking_id: booking.id,
+            payment_id: paymentRecord.id,
+            amount: paidAmount,
+            status: 'ISSUED',
+            notes: JSON.stringify(customDetails),
+          })
+          .select()
+          .single();
+
+        receiptRecord = recData;
+      } catch (recErr) {
+        console.error('Auto receipt issuance error:', recErr);
+      }
+    }
+
+    // 11. Update Room Status to 'occupied' if checked in today
+    if (initialStatus === 'CHECKED_IN') {
+      await supabase
+        .from('rooms')
+        .update({ status: 'occupied' })
+        .eq('id', room.id);
+    }
+
+    // 12. Send LINE Admin Notification
     try {
-      const lineMsg = `🔔 มีรายการจองห้องพักใหม่!\n\n📋 เลขที่ใบจอง: ${bookingNumber}\n🏨 ห้อง: ${room.room_name} (${room.room_number})\n👤 ผู้จอง: ${customerName || 'ลูกค้า'}\n📞 โทร: ${customerPhone || '-'}\n📅 เข้าพัก: ${checkInDate} ถึง ${checkOutDate} (${totalNights} คืน)\n👥 จำนวนผู้เข้าพัก: ${numGuests} ท่าน\n💰 ยอดสุทธิ: ฿${netTotal.toLocaleString('th-TH')}\n\n👉 ดูรายละเอียด: https://room-booking-eta-ten.vercel.app/admin/bookings`;
+      const lineMsg = `🔔 มีรายการจองห้องพักใหม่! ${isWalkIn ? '(ลูกค้า Walk-in หน้าร้าน 🚶)' : ''}\n\n📋 เลขที่ใบจอง: ${bookingNumber}\n🏨 ห้อง: ${room.room_name} (${room.room_number})\n👤 ผู้จอง: ${effectiveCustName}\n📞 โทร: ${effectiveCustPhone || '-'}\n📅 เข้าพัก: ${checkInDate} ถึง ${checkOutDate} (${totalNights} คืน)\n👥 จำนวนผู้เข้าพัก: ${numGuests} ท่าน\n💰 ยอดสุทธิ: ฿${netTotal.toLocaleString('th-TH')}${paidAmount > 0 ? ` (ชำระแล้ว ฿${paidAmount.toLocaleString('th-TH')})` : ''}\n📌 สถานะ: ${initialStatus}\n\n👉 ดูรายละเอียด: https://room-booking-eta-ten.vercel.app/admin/bookings`;
       sendLineAdminNotification(lineMsg).catch(() => {});
     } catch {
       // ignore
     }
 
-    // 11. Return full booking
+    // 13. Return full booking
     const { data: completeBooking } = await supabase
       .from('bookings')
       .select(`
@@ -285,7 +397,12 @@ export async function POST(req: NextRequest) {
       .eq('id', booking.id)
       .single();
 
-    return NextResponse.json({ success: true, booking: completeBooking });
+    return NextResponse.json({
+      success: true,
+      booking: completeBooking,
+      payment: paymentRecord,
+      receipt: receiptRecord,
+    });
   } catch (error) {
     console.error('Booking POST error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

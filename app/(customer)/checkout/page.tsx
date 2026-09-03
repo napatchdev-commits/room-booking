@@ -99,6 +99,22 @@ function CheckoutContent() {
       .catch(() => {});
   }, [roomId]);
 
+  // Real-time Availability Check: Verify room isn't booked
+  const [isRoomUnavailable, setIsRoomUnavailable] = useState(false);
+  useEffect(() => {
+    if (!roomId || !checkInDate || !checkOutDate) return;
+
+    fetch(`/api/rooms/available?checkIn=${checkInDate}&checkOut=${checkOutDate}`, { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success && Array.isArray(d.rooms)) {
+          const isAvailable = d.rooms.some((r: Room) => r.id === roomId);
+          setIsRoomUnavailable(!isAvailable);
+        }
+      })
+      .catch(() => {});
+  }, [roomId, checkInDate, checkOutDate]);
+
   const nights = Math.max(1, calculateNights(checkInDate, checkOutDate));
 
   // Calculate pricing breakdown
@@ -250,6 +266,29 @@ function CheckoutContent() {
           กรุณาตรวจสอบรายละเอียดห้องพักและข้อมูลผู้เข้าพักก่อนทำการยืนยันการจอง
         </p>
       </div>
+
+      {isRoomUnavailable && (
+        <div className="mb-6 p-5 bg-red-50 border-2 border-red-300 rounded-3xl text-red-800 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0" />
+            <div>
+              <div className="text-sm font-extrabold text-red-900">
+                🔴 ขออภัย ห้องพักนี้ถูกจองเต็มแล้วสำหรับวันที่คุณเลือก!
+              </div>
+              <div className="text-xs text-red-700 mt-0.5">
+                มีผู้เข้าพักอื่นได้ทำการจองหรือเช็คอินห้องนี้ไปแล้ว กรุณากลับไปเลือกห้องพักห้องอื่นที่ยังว่าง
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => router.push(`/?checkIn=${checkInDate}&checkOut=${checkOutDate}&guests=${numGuests}#rooms-section`)}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-sm whitespace-nowrap transition-colors"
+          >
+            เลือกห้องอื่น &rarr;
+          </button>
+        </div>
+      )}
 
       {errorMsg && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-xs flex items-start gap-2.5 shadow-sm animate-in fade-in">

@@ -164,22 +164,50 @@ function HomeContent() {
             <p className="text-xs mt-1">กรุณาลองเลือกช่วงวันที่ใหม่อีกครั้ง</p>
           </div>
         ) : rooms.length === 0 ? (
-          <div className="text-center py-16 px-4 bg-white rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
-            <div className="w-16 h-16 rounded-full bg-resort-50 text-resort-600 flex items-center justify-center mx-auto text-2xl">
+          <div className="text-center py-12 sm:py-16 px-4 bg-white rounded-3xl border-2 border-red-200/80 shadow-md space-y-4 max-w-2xl mx-auto">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-100 text-red-800 text-xs font-black border border-red-300">
+              🔴 ห้องพักเต็มแล้วสำหรับวันที่คุณเลือก (Fully Booked)
+            </div>
+
+            <div className="w-16 h-16 rounded-3xl bg-red-50 text-red-600 flex items-center justify-center mx-auto text-3xl shadow-inner">
               🏨
             </div>
-            <h3 className="text-lg font-bold text-slate-800">
-              ยังไม่มีห้องว่างในช่วงวันที่คุณเลือก
-            </h3>
-            <p className="text-xs text-slate-500 max-w-md mx-auto">
-              ห้องพักทั้งหมดอาจถูกจองเต็มแล้ว หรือยังไม่มีการเพิ่มห้องพักในระบบ กรุณาลองเลือกวันอื่น หรือติดต่อเจ้าหน้าที่
-            </p>
-            <div className="pt-2">
+
+            <div className="space-y-1">
+              <h3 className="text-xl font-extrabold text-slate-900">
+                ขออภัย ไม่มีห้องว่างในช่วงวันที่เลือก
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
+                ห้องพักทั้งหมดถูกจองเต็มแล้วสำหรับวันที่ <span className="font-bold text-slate-800">{checkIn} ถึง {checkOut}</span> ({guests} ท่าน) กรุณาลองเลือกวันเข้าพักอื่น หรือติดต่อเจ้าหน้าที่โดยตรง
+              </p>
+            </div>
+
+            <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-resort-700 hover:text-resort-800 bg-resort-50 px-4 py-2.5 rounded-xl border border-resort-200 transition-colors shadow-sm"
+              >
+                🔄 เปลี่ยนวันเข้าพัก
+              </button>
+
+              {settings?.phone && (
+                <a
+                  href={`tel:${settings.phone}`}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-4 py-2.5 rounded-xl border border-emerald-200 transition-colors shadow-sm"
+                >
+                  <Phone className="w-3.5 h-3.5" />
+                  <span>โทร: {settings.phone}</span>
+                </a>
+              )}
+
               <Link
                 href="/contact"
-                className="inline-flex items-center text-xs font-semibold text-resort-700 hover:text-resort-800 bg-resort-50 px-4 py-2 rounded-xl border border-resort-200"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 px-4 py-2.5 rounded-xl border border-slate-300 transition-colors"
               >
-                ติดต่อสอบถามเจ้าหน้าที่ &rarr;
+                <span>ติดต่อรีสอร์ท &rarr;</span>
               </Link>
             </div>
           </div>

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { formatCurrency, formatDateTime } from '@/lib/formatters';
+import { WalkInModal } from '@/components/admin/WalkInModal';
 import {
   BedDouble,
   DoorOpen,
@@ -16,6 +17,7 @@ import {
   ArrowRight,
   Sparkles,
   Users,
+  UserCheck,
 } from 'lucide-react';
 
 export default function AdminDashboardPage() {
@@ -42,8 +44,9 @@ export default function AdminDashboardPage() {
 
   const [recentBookings, setRecentBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isWalkInModalOpen, setIsWalkInModalOpen] = useState(false);
 
-  useEffect(() => {
+  const fetchDashboardData = () => {
     fetch('/api/reports')
       .then((r) => r.json())
       .then((d) => d.success && setData(d))
@@ -54,6 +57,10 @@ export default function AdminDashboardPage() {
       .then((d) => d.success && setRecentBookings((d.bookings || []).slice(0, 5)))
       .catch(() => {})
       .finally(() => setIsLoading(false));
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
   }, []);
 
   const kpis = data?.kpis;
@@ -71,7 +78,14 @@ export default function AdminDashboardPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setIsWalkInModalOpen(true)}
+            className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-700/20 flex items-center gap-1.5 transition-all"
+          >
+            <UserCheck className="w-4 h-4" />
+            <span>+ รับลูกค้า Walk-in</span>
+          </button>
           <Link
             href="/admin/calendar"
             className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 shadow-sm flex items-center gap-1.5 transition-colors"
@@ -288,6 +302,15 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Walk-in Modal */}
+      <WalkInModal
+        isOpen={isWalkInModalOpen}
+        onClose={() => setIsWalkInModalOpen(false)}
+        onSuccess={() => {
+          fetchDashboardData();
+        }}
+      />
     </div>
   );
 }

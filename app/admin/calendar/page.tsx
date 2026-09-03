@@ -4,7 +4,19 @@ import React, { useState, useEffect } from 'react';
 import { format, addDays, subDays, eachDayOfInterval, isSameDay, parseISO } from 'date-fns';
 import { Room, Booking } from '@/types/database';
 import { formatDateShort } from '@/lib/formatters';
-import { CalendarDays, ChevronLeft, ChevronRight, BedDouble, Info, Check, Clock, User } from 'lucide-react';
+import { WalkInModal } from '@/components/admin/WalkInModal';
+import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  BedDouble,
+  Info,
+  Check,
+  Clock,
+  User,
+  UserCheck,
+  Plus,
+} from 'lucide-react';
 import Link from 'next/link';
 
 export default function RoomCalendarPage() {
@@ -14,6 +26,11 @@ export default function RoomCalendarPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+
+  // Walk-in modal state
+  const [isWalkInModalOpen, setIsWalkInModalOpen] = useState(false);
+  const [walkInRoomId, setWalkInRoomId] = useState<string | undefined>(undefined);
+  const [walkInDate, setWalkInDate] = useState<string | undefined>(undefined);
 
   const dates = eachDayOfInterval({
     start: startDate,
@@ -75,8 +92,19 @@ export default function RoomCalendarPage() {
           </p>
         </div>
 
-        {/* Date Navigator */}
-        <div className="flex items-center gap-2">
+        {/* Action Buttons & Date Navigator */}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => {
+              setWalkInRoomId(undefined);
+              setWalkInDate(format(new Date(), 'yyyy-MM-dd'));
+              setIsWalkInModalOpen(true);
+            }}
+            className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all"
+          >
+            <UserCheck className="w-3.5 h-3.5" />
+            <span>+ รับลูกค้า Walk-in</span>
+          </button>
           <button
             onClick={todayPeriod}
             className="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg text-xs font-bold text-slate-700"
@@ -215,9 +243,18 @@ export default function RoomCalendarPage() {
 
                         return (
                           <td key={dIdx} className="p-1 border-r border-slate-100">
-                            <div className="h-9 rounded bg-emerald-50 hover:bg-emerald-100 flex items-center justify-center text-emerald-600 text-[10px] font-medium transition-colors">
-                              -
-                            </div>
+                            <button
+                              onClick={() => {
+                                setWalkInRoomId(room.id);
+                                setWalkInDate(format(date, 'yyyy-MM-dd'));
+                                setIsWalkInModalOpen(true);
+                              }}
+                              title={`คลิกเพื่อเช็คอิน Walk-in ห้อง ${room.room_number} (${format(date, 'yyyy-MM-dd')})`}
+                              className="w-full h-9 rounded bg-emerald-50 hover:bg-emerald-100 hover:border hover:border-emerald-300 flex items-center justify-center text-emerald-600 hover:text-emerald-800 text-[10px] font-bold transition-all group"
+                            >
+                              <span className="group-hover:hidden">-</span>
+                              <span className="hidden group-hover:inline text-[9px] font-extrabold">+ รับ</span>
+                            </button>
                           </td>
                         );
                       })}
@@ -264,6 +301,17 @@ export default function RoomCalendarPage() {
           </div>
         </div>
       )}
+
+      {/* Walk-in Modal */}
+      <WalkInModal
+        isOpen={isWalkInModalOpen}
+        onClose={() => setIsWalkInModalOpen(false)}
+        initialRoomId={walkInRoomId}
+        initialDate={walkInDate}
+        onSuccess={() => {
+          fetchData();
+        }}
+      />
     </div>
   );
 }
