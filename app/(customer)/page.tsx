@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { format, addDays } from 'date-fns';
 import { AgodaSearchBar } from '@/components/ui/AgodaSearchBar';
 import { RoomCard } from '@/components/ui/RoomCard';
+import { MaintenanceNotice } from '@/components/ui/MaintenanceNotice';
 import { Room, Promotion, Settings } from '@/types/database';
 import { Sparkles, Palmtree, MapPin, Phone, ShieldCheck, HeartHandshake, BedDouble } from 'lucide-react';
 import Link from 'next/link';
@@ -69,6 +70,11 @@ function HomeContent() {
     setCheckOut(params.checkOut);
     setGuests(params.guests);
   };
+
+  // If Maintenance Mode is active, show the Maintenance Screen
+  if (settings?.is_maintenance_mode) {
+    return <MaintenanceNotice settings={settings} />;
+  }
 
   return (
     <div className="space-y-8 md:space-y-12">

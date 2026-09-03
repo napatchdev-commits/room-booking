@@ -21,6 +21,7 @@ import {
   X,
   UserCheck,
   Bell,
+  Wrench,
 } from 'lucide-react';
 
 export default function AdminLayout({
@@ -35,6 +36,7 @@ export default function AdminLayout({
   // Live Notification Badges
   const [pendingBookingsCount, setPendingBookingsCount] = useState<number>(0);
   const [pendingPaymentsCount, setPendingPaymentsCount] = useState<number>(0);
+  const [isMaintenanceMode, setIsMaintenanceMode] = useState<boolean>(false);
 
   // Load / save active admin role
   useEffect(() => {
@@ -49,7 +51,7 @@ export default function AdminLayout({
     localStorage.setItem('resort_admin_role', role);
   };
 
-  // Poll live pending bookings & payments count for notification badges
+  // Poll live pending bookings & payments count & maintenance status
   const fetchLiveCounts = useCallback(async () => {
     try {
       // 1. Pending Bookings count
@@ -64,6 +66,13 @@ export default function AdminLayout({
       const pData = await pRes.json();
       if (pData.success && Array.isArray(pData.payments)) {
         setPendingPaymentsCount(pData.payments.length);
+      }
+
+      // 3. Settings / Maintenance Mode
+      const sRes = await fetch('/api/settings', { cache: 'no-store' });
+      const sData = await sRes.json();
+      if (sData.success && sData.settings) {
+        setIsMaintenanceMode(sData.settings.is_maintenance_mode ?? false);
       }
     } catch {
       // ignore
@@ -191,6 +200,18 @@ export default function AdminLayout({
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Maintenance Mode Active Indicator in Header */}
+            {isMaintenanceMode && (
+              <Link
+                href="/admin/settings"
+                className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-black flex items-center gap-1.5 shadow-sm transition-colors animate-pulse"
+                title="ระบบอยู่ในโหมดปิดปรับปรุง คลิกเพื่อไปตั้งค่า"
+              >
+                <Wrench className="w-3.5 h-3.5 animate-spin" />
+                <span className="hidden sm:inline">โหมดปิดปรับปรุง (ON)</span>
+              </Link>
+            )}
+
             {/* Quick alert badge in header */}
             {totalPending > 0 && (
               <Link

@@ -134,6 +134,36 @@ export async function POST(req: NextRequest) {
 
     const supabase = getAdminClient();
 
+    // Check System Maintenance Mode (Block online bookings, permit walk-in by admin)
+    if (!isWalkIn) {
+      const { data: settings } = await supabase
+        .from('settings')
+        .select('*')
+        .eq('id', 'default')
+        .maybeSingle();
+
+      let isMaintenance = settings?.is_maintenance_mode ?? false;
+      if (!isMaintenance && settings?.policy_terms?.startsWith('{')) {
+        try {
+          const pObj = JSON.parse(settings.policy_terms);
+          if (pObj.maintenance?.enabled) isMaintenance = true;
+        } catch {
+          // ignore
+        }
+      }
+
+      if (isMaintenance) {
+        return NextResponse.json(
+          {
+            error:
+              settings?.maintenance_message ||
+              'ขออภัย ระบบอยู่ระหว่างการปิดปรับปรุงชั่วคราว (Maintenance Mode) ไม่สามารถทำการจองออนไลน์ได้ในขณะนี้',
+          },
+          { status: 503 }
+        );
+      }
+    }
+
     // 1. Get/Create Customer
     let customerId = providedCustomerId;
     const effectiveCustName = customerName || (isWalkIn ? 'ลูกค้า Walk-in' : 'ลูกค้าผู้เข้าพัก');

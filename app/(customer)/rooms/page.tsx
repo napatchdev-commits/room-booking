@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { RoomCard } from '@/components/ui/RoomCard';
 import { AgodaSearchBar } from '@/components/ui/AgodaSearchBar';
-import { Room, RoomType } from '@/types/database';
+import { MaintenanceNotice } from '@/components/ui/MaintenanceNotice';
+import { Room, RoomType, Settings } from '@/types/database';
 import { BedDouble } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 
@@ -17,6 +18,7 @@ export default function RoomsCatalogPage() {
 
   const [rooms, setRooms] = useState<Room[]>([]);
   const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
+  const [settings, setSettings] = useState<Settings | null>(null);
   const [selectedType, setSelectedType] = useState<string>('ALL');
   const [isLoading, setIsLoading] = useState(true);
 
@@ -44,6 +46,11 @@ export default function RoomsCatalogPage() {
       .then((r) => r.json())
       .then((d) => d.success && setRoomTypes(d.roomTypes || []))
       .catch(() => {});
+
+    fetch('/api/settings', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => d.success && setSettings(d.settings))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -56,6 +63,10 @@ export default function RoomsCatalogPage() {
     setGuests(params.guests);
     fetchRooms(params.checkIn, params.checkOut, params.guests, selectedType);
   };
+
+  if (settings?.is_maintenance_mode) {
+    return <MaintenanceNotice settings={settings} />;
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 md:py-10 space-y-6">

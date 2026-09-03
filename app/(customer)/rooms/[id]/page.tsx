@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Room, Settings } from '@/types/database';
+import { MaintenanceNotice } from '@/components/ui/MaintenanceNotice';
 import { formatCurrency, calculateNights } from '@/lib/formatters';
 import {
   Users,
@@ -33,11 +34,17 @@ export default function RoomDetailPage() {
   const guests = parseInt(searchParams.get('guests') || '2', 10);
 
   const [room, setRoom] = useState<Room | null>(null);
+  const [settings, setSettings] = useState<Settings | null>(null);
   const [selectedImgIndex, setSelectedImgIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    fetch('/api/settings', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => d.success && setSettings(d.settings))
+      .catch(() => {});
+
     if (!id) return;
     fetch(`/api/rooms/${id}`)
       .then((r) => r.json())
@@ -49,6 +56,10 @@ export default function RoomDetailPage() {
       .catch(() => {})
       .finally(() => setIsLoading(false));
   }, [id]);
+
+  if (settings?.is_maintenance_mode) {
+    return <MaintenanceNotice settings={settings} />;
+  }
 
   if (isLoading) {
     return (

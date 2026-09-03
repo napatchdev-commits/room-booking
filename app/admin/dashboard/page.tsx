@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { formatCurrency, formatDateTime } from '@/lib/formatters';
+import { Room, Booking, Settings } from '@/types/database';
 import { WalkInModal } from '@/components/admin/WalkInModal';
 import {
   BedDouble,
@@ -18,6 +19,7 @@ import {
   Sparkles,
   Users,
   UserCheck,
+  Wrench,
 } from 'lucide-react';
 
 export default function AdminDashboardPage() {
@@ -43,6 +45,7 @@ export default function AdminDashboardPage() {
   } | null>(null);
 
   const [recentBookings, setRecentBookings] = useState<any[]>([]);
+  const [settings, setSettings] = useState<Settings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isWalkInModalOpen, setIsWalkInModalOpen] = useState(false);
 
@@ -50,6 +53,11 @@ export default function AdminDashboardPage() {
     fetch('/api/reports')
       .then((r) => r.json())
       .then((d) => d.success && setData(d))
+      .catch(() => {});
+
+    fetch('/api/settings', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => d.success && setSettings(d.settings))
       .catch(() => {});
 
     fetch('/api/bookings?isAdmin=true')
@@ -67,6 +75,35 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* Maintenance Mode Active Banner */}
+      {settings?.is_maintenance_mode && (
+        <div className="p-4 sm:p-5 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-2xl shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+              <Wrench className="w-5 h-5 animate-spin text-white" />
+            </div>
+            <div>
+              <div className="font-extrabold text-sm flex items-center gap-2">
+                <span>⚠️ ระบบกำลังอยู่ใน &quot;โหมดปิดปรับปรุงระบบชั่วคราว (Maintenance Mode)&quot;</span>
+                <span className="px-2 py-0.5 rounded-full bg-white/30 text-[10px] uppercase font-black">
+                  ACTIVE
+                </span>
+              </div>
+              <p className="text-xs text-amber-100 mt-0.5">
+                {settings.maintenance_message || 'ลูกค้าทั่วไปจะไม่สามารถจองห้องพักออนไลน์ได้ในขณะนี้'} {settings.maintenance_until && `(กำหนดเปิด: ${settings.maintenance_until})`}
+              </p>
+            </div>
+          </div>
+
+          <Link
+            href="/admin/settings"
+            className="px-4 py-2 bg-white text-orange-700 hover:bg-orange-50 rounded-xl text-xs font-bold shadow-sm whitespace-nowrap transition-colors flex items-center gap-1 self-start sm:self-auto"
+          >
+            <span>ตั้งค่า / ปิดโหมด &rarr;</span>
+          </Link>
+        </div>
+      )}
+
       {/* Top Title & Overview */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>

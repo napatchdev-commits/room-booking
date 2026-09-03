@@ -42,6 +42,9 @@ export interface Settings {
   check_in_time: string;
   check_out_time: string;
   policy_terms?: string;
+  is_maintenance_mode?: boolean;
+  maintenance_message?: string;
+  maintenance_until?: string;
   created_at: string;
   updated_at: string;
 }

@@ -23,8 +23,33 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    let parsedSettings = settings || {};
+    if (parsedSettings.policy_terms) {
+      try {
+        if (parsedSettings.policy_terms.startsWith('{')) {
+          const obj = JSON.parse(parsedSettings.policy_terms);
+          if (obj.maintenance) {
+            if (parsedSettings.is_maintenance_mode === undefined) {
+              parsedSettings.is_maintenance_mode = obj.maintenance.enabled ?? false;
+            }
+            if (parsedSettings.maintenance_message === undefined) {
+              parsedSettings.maintenance_message = obj.maintenance.message || '';
+            }
+            if (parsedSettings.maintenance_until === undefined) {
+              parsedSettings.maintenance_until = obj.maintenance.until || '';
+            }
+          }
+          if (obj.text !== undefined && typeof obj.text === 'string') {
+            parsedSettings.policy_terms = obj.text;
+          }
+        }
+      } catch {
+        // keep as string
+      }
+    }
+
     return NextResponse.json(
-      { success: true, settings: settings || {} },
+      { success: true, settings: parsedSettings },
       {
         headers: {
           'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
@@ -95,6 +120,9 @@ export async function PUT(req: NextRequest) {
     if (check_in_time !== undefined) updatePayload.check_in_time = check_in_time;
     if (check_out_time !== undefined) updatePayload.check_out_time = check_out_time;
     if (policy_terms !== undefined) updatePayload.policy_terms = policy_terms;
+    if (body.is_maintenance_mode !== undefined) updatePayload.is_maintenance_mode = body.is_maintenance_mode;
+    if (body.maintenance_message !== undefined) updatePayload.maintenance_message = body.maintenance_message;
+    if (body.maintenance_until !== undefined) updatePayload.maintenance_until = body.maintenance_until;
 
     let { data: updated, error } = await supabase
       .from('settings')
@@ -102,13 +130,34 @@ export async function PUT(req: NextRequest) {
       .select()
       .single();
 
-    // Fallback: If line_channel_access_token column does not exist yet in Supabase schema
+    // Fallback: If extra columns do not exist yet in Supabase schema
     if (error && error.code === 'PGRST204') {
-      console.warn('PGRST204: Line token columns not yet in Supabase table. Retrying with basic columns...');
+      console.warn('PGRST204: Extra columns not yet in Supabase table. Retrying with basic columns and storing in policy_terms...');
       const fallbackPayload = { ...updatePayload };
       delete fallbackPayload.line_channel_access_token;
       delete fallbackPayload.line_admin_user_id;
       delete fallbackPayload.line_notify_token;
+      delete fallbackPayload.is_maintenance_mode;
+      delete fallbackPayload.maintenance_message;
+      delete fallbackPayload.maintenance_until;
+
+      // Store maintenance settings safely inside policy_terms metadata
+      try {
+        let existingPolicyObj: Record<string, unknown> = {};
+        try {
+          existingPolicyObj = JSON.parse((before?.policy_terms as string) || '{}');
+        } catch {
+          existingPolicyObj = { text: before?.policy_terms || '' };
+        }
+        existingPolicyObj.maintenance = {
+          enabled: body.is_maintenance_mode ?? false,
+          message: body.maintenance_message || '',
+          until: body.maintenance_until || '',
+        };
+        fallbackPayload.policy_terms = JSON.stringify(existingPolicyObj);
+      } catch {
+        // ignore
+      }
 
       const retry = await supabase
         .from('settings')
@@ -120,12 +169,15 @@ export async function PUT(req: NextRequest) {
         return NextResponse.json({ error: retry.error.message }, { status: 500 });
       }
 
-      // Merge the entered tokens so client gets confirmation
+      // Merge the entered values so client gets confirmation
       updated = {
         ...retry.data,
         line_channel_access_token,
         line_admin_user_id,
         line_notify_token,
+        is_maintenance_mode: body.is_maintenance_mode,
+        maintenance_message: body.maintenance_message,
+        maintenance_until: body.maintenance_until,
       };
     } else if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });

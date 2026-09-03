@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useLiff } from '@/components/providers/LiffProvider';
 import { Room, Promotion, Settings } from '@/types/database';
+import { MaintenanceNotice } from '@/components/ui/MaintenanceNotice';
 import { calculateNights, formatCurrency, formatDateThai } from '@/lib/formatters';
 import { calculateBookingPrices } from '@/lib/pricing';
 import {
@@ -244,6 +245,10 @@ function CheckoutContent() {
       setIsSubmitting(false);
     }
   };
+
+  if (settings?.is_maintenance_mode) {
+    return <MaintenanceNotice settings={settings} />;
+  }
 
   if (!room) {
     return (

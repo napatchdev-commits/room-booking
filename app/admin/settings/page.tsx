@@ -16,6 +16,7 @@ import {
   Bell,
   Send,
   Loader2,
+  Wrench,
 } from 'lucide-react';
 
 export default function AdminSettingsPage() {
@@ -40,6 +41,11 @@ export default function AdminSettingsPage() {
   const [checkInTime, setCheckInTime] = useState('14:00');
   const [checkOutTime, setCheckOutTime] = useState('12:00');
   const [policyTerms, setPolicyTerms] = useState('');
+
+  // Maintenance Mode States
+  const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
+  const [maintenanceMessage, setMaintenanceMessage] = useState('');
+  const [maintenanceUntil, setMaintenanceUntil] = useState('');
 
   // Bank Account
   const [bankName, setBankName] = useState('');
@@ -81,6 +87,9 @@ export default function AdminSettingsPage() {
         setCheckInTime(formatTimeForInput(s.check_in_time) || '14:00');
         setCheckOutTime(formatTimeForInput(s.check_out_time) || '12:00');
         setPolicyTerms(s.policy_terms || '');
+        setIsMaintenanceMode(s.is_maintenance_mode ?? false);
+        setMaintenanceMessage(s.maintenance_message || '');
+        setMaintenanceUntil(s.maintenance_until || '');
 
         if (s.bank_accounts && Array.isArray(s.bank_accounts) && s.bank_accounts.length > 0) {
           const b = s.bank_accounts[0];
@@ -135,6 +144,9 @@ export default function AdminSettingsPage() {
           check_in_time: checkInTime,
           check_out_time: checkOutTime,
           policy_terms: policyTerms.trim(),
+          is_maintenance_mode: isMaintenanceMode,
+          maintenance_message: maintenanceMessage.trim(),
+          maintenance_until: maintenanceUntil.trim(),
           bank_accounts: bankAccounts,
           actorName: 'Admin',
         }),
@@ -224,6 +236,84 @@ export default function AdminSettingsPage() {
       )}
 
       <form onSubmit={handleSaveSettings} className="space-y-6">
+        {/* Maintenance Mode Settings (โหมดปิดปรับปรุงระบบ / ซ่อมบำรุง) */}
+        <div className={`rounded-3xl border p-5 sm:p-6 shadow-sm space-y-4 transition-all ${
+          isMaintenanceMode
+            ? 'bg-amber-50/80 border-amber-300 ring-2 ring-amber-400/30'
+            : 'bg-white border-slate-200'
+        }`}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className={`w-9 h-9 rounded-2xl flex items-center justify-center font-bold transition-colors ${
+                isMaintenanceMode ? 'bg-amber-600 text-white shadow-md' : 'bg-slate-100 text-slate-600'
+              }`}>
+                <Wrench className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <span>โหมดปิดปรับปรุงระบบ / ซ่อมบำรุง (Maintenance Mode)</span>
+                  {isMaintenanceMode ? (
+                    <span className="px-2 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-extrabold animate-pulse">
+                      🔴 กำลังปิดปรับปรุง
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold">
+                      🟢 เปิดให้บริการปกติ
+                    </span>
+                  )}
+                </h2>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  เมื่อเปิดใช้งาน ระบบจะปิดรับการจองออนไลน์ และแสดงหน้าแจ้งปิดปรับปรุงให้ลูกค้าทราบ โดยที่แอดมินยังคงเข้าใช้งานจัดการระบบได้ตามปกติ
+                </p>
+              </div>
+            </div>
+
+            {/* Toggle Switch */}
+            <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+              <input
+                type="checkbox"
+                checked={isMaintenanceMode}
+                onChange={(e) => setIsMaintenanceMode(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+              <span className="ml-2.5 text-xs font-bold text-slate-700">
+                {isMaintenanceMode ? 'เปิดโหมดปิดปรับปรุง' : 'ปิด (ทำงานปกติ)'}
+              </span>
+            </label>
+          </div>
+
+          {isMaintenanceMode && (
+            <div className="space-y-3.5 pt-1 text-xs animate-in fade-in">
+              <div>
+                <label className="block font-bold text-amber-900 mb-1">
+                  ข้อความชี้แจงลูกค้า (Maintenance Announcement Message)
+                </label>
+                <textarea
+                  rows={2}
+                  value={maintenanceMessage}
+                  onChange={(e) => setMaintenanceMessage(e.target.value)}
+                  placeholder="ขณะนี้ทางรีสอร์ทกำลังดำเนินการปิดปรับปรุงระบบและซ่อมบำรุงห้องพักชั่วคราว เพื่อยกระดับความสะดวกสบายสำหรับคุณ ขออภัยในความไม่สะดวก"
+                  className="w-full px-3 py-2 bg-white border border-amber-200 rounded-xl font-medium text-slate-800 outline-none focus:border-amber-500 shadow-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-amber-900 mb-1">
+                  กำหนดเวลาเปิดให้บริการตามปกติ (Estimated Reopening Date/Time)
+                </label>
+                <input
+                  type="text"
+                  value={maintenanceUntil}
+                  onChange={(e) => setMaintenanceUntil(e.target.value)}
+                  placeholder="เช่น วันที่ 5 กันยายน 2569 เวลา 08:00 น."
+                  className="w-full sm:w-1/2 px-3 py-2 bg-white border border-amber-200 rounded-xl font-medium text-slate-800 outline-none focus:border-amber-500 shadow-sm"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Resort Profile */}
         <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
           <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">

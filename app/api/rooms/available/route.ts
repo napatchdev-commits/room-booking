@@ -23,6 +23,37 @@ export async function GET(req: NextRequest) {
 
     const supabase = getAdminClient();
 
+    const isAdmin = searchParams.get('isAdmin') === 'true';
+
+    // System Maintenance Mode Check (Lock online availability for customers)
+    if (!isAdmin) {
+      const { data: settings } = await supabase
+        .from('settings')
+        .select('*')
+        .eq('id', 'default')
+        .maybeSingle();
+
+      let isMaintenance = settings?.is_maintenance_mode ?? false;
+      if (!isMaintenance && settings?.policy_terms?.startsWith('{')) {
+        try {
+          const pObj = JSON.parse(settings.policy_terms);
+          if (pObj.maintenance?.enabled) isMaintenance = true;
+        } catch {
+          // ignore
+        }
+      }
+
+      if (isMaintenance) {
+        return NextResponse.json({
+          success: true,
+          isMaintenanceMode: true,
+          rooms: [],
+          count: 0,
+          message: 'ระบบอยู่ระหว่างการปิดปรับปรุงชั่วคราว',
+        });
+      }
+    }
+
     // 1. Find conflicting bookings
     const bookedRoomIds = new Set<string>();
     if (checkIn && checkOut) {
