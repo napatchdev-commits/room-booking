@@ -50,6 +50,11 @@ export default function AdminPaymentsPage() {
       return;
     }
 
+    // Optimistic UI Update: Remove from pending list immediately
+    setPayments((prev) => prev.filter((p) => p.id !== paymentId));
+    setRejectPaymentId(null);
+    setRejectionReason('');
+
     try {
       const res = await fetch(`/api/payments/${paymentId}/verify`, {
         method: 'POST',
@@ -65,14 +70,12 @@ export default function AdminPaymentsPage() {
       const data = await res.json();
       if (!data.success) {
         alert(data.error || 'Verification failed');
+        fetchPayments();
         return;
       }
-
-      setRejectPaymentId(null);
-      setRejectionReason('');
-      fetchPayments();
     } catch (err) {
       console.error('Verification error:', err);
+      fetchPayments();
     }
   };
 

@@ -49,22 +49,29 @@ export default function AdminDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isWalkInModalOpen, setIsWalkInModalOpen] = useState(false);
 
-  const fetchDashboardData = () => {
-    fetch('/api/reports')
-      .then((r) => r.json())
-      .then((d) => d.success && setData(d))
-      .catch(() => {});
+  const fetchDashboardData = async () => {
+    setIsLoading(true);
+    try {
+      const [reportsRes, settingsRes, bookingsRes] = await Promise.all([
+        fetch('/api/reports', { cache: 'no-store' }),
+        fetch('/api/settings', { cache: 'no-store' }),
+        fetch('/api/bookings?isAdmin=true&limit=5', { cache: 'no-store' }),
+      ]);
 
-    fetch('/api/settings', { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((d) => d.success && setSettings(d.settings))
-      .catch(() => {});
+      const [reportsData, settingsData, bookingsData] = await Promise.all([
+        reportsRes.json(),
+        settingsRes.json(),
+        bookingsRes.json(),
+      ]);
 
-    fetch('/api/bookings?isAdmin=true')
-      .then((r) => r.json())
-      .then((d) => d.success && setRecentBookings((d.bookings || []).slice(0, 5)))
-      .catch(() => {})
-      .finally(() => setIsLoading(false));
+      if (reportsData.success) setData(reportsData);
+      if (settingsData.success) setSettings(settingsData.settings);
+      if (bookingsData.success) setRecentBookings(bookingsData.bookings || []);
+    } catch (err) {
+      console.error('Dashboard data load error:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {

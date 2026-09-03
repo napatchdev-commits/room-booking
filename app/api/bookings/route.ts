@@ -54,6 +54,8 @@ export async function GET(req: NextRequest) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const isAdmin = searchParams.get('isAdmin') === 'true';
+    const limitParam = searchParams.get('limit');
+    const limit = limitParam ? parseInt(limitParam, 10) : undefined;
 
     // Privacy & Security Check: If not admin and no customer filter provided, return empty
     if (!isAdmin && !customerId && !search) {
@@ -80,6 +82,9 @@ export async function GET(req: NextRequest) {
     if (endDate) query = query.lte('check_out_date', endDate);
     if (search) {
       query = query.or(`booking_number.ilike.%${search}%,customer.full_name.ilike.%${search}%,customer.phone.ilike.%${search}%`);
+    }
+    if (limit && !isNaN(limit)) {
+      query = query.limit(limit);
     }
 
     const { data: bookings, error } = await query;

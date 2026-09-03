@@ -79,6 +79,11 @@ export default function AdminBookingsPage() {
   };
 
   const handleUpdateStatus = async (id: string, newStatus: string) => {
+    // Optimistic UI Update: update table instantly
+    setBookings((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, status: newStatus as any } : b))
+    );
+
     try {
       const res = await fetch(`/api/bookings/${id}`, {
         method: 'PATCH',
@@ -86,11 +91,12 @@ export default function AdminBookingsPage() {
         body: JSON.stringify({ status: newStatus, actorName: 'Admin' }),
       });
       const data = await res.json();
-      if (data.success) {
+      if (!data.success) {
         fetchBookings();
       }
     } catch (err) {
       console.error('Status update failed:', err);
+      fetchBookings();
     }
   };
 

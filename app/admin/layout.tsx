@@ -51,28 +51,18 @@ export default function AdminLayout({
     localStorage.setItem('resort_admin_role', role);
   };
 
-  // Poll live pending bookings & payments count & maintenance status
+  // Poll live pending bookings & payments count & maintenance status (Ultra-fast consolidated API)
   const fetchLiveCounts = useCallback(async () => {
+    // Only poll when document is visible
+    if (typeof document !== 'undefined' && document.hidden) return;
+
     try {
-      // 1. Pending Bookings count
-      const bRes = await fetch('/api/bookings?status=PENDING&isAdmin=true', { cache: 'no-store' });
-      const bData = await bRes.json();
-      if (bData.success && Array.isArray(bData.bookings)) {
-        setPendingBookingsCount(bData.bookings.length);
-      }
-
-      // 2. Pending Payments count
-      const pRes = await fetch('/api/payments?status=PENDING', { cache: 'no-store' });
-      const pData = await pRes.json();
-      if (pData.success && Array.isArray(pData.payments)) {
-        setPendingPaymentsCount(pData.payments.length);
-      }
-
-      // 3. Settings / Maintenance Mode
-      const sRes = await fetch('/api/settings', { cache: 'no-store' });
-      const sData = await sRes.json();
-      if (sData.success && sData.settings) {
-        setIsMaintenanceMode(sData.settings.is_maintenance_mode ?? false);
+      const res = await fetch('/api/admin/badge-counts', { cache: 'no-store' });
+      const data = await res.json();
+      if (data.success) {
+        setPendingBookingsCount(data.pendingBookings || 0);
+        setPendingPaymentsCount(data.pendingPayments || 0);
+        setIsMaintenanceMode(data.isMaintenanceMode ?? false);
       }
     } catch {
       // ignore
@@ -81,8 +71,15 @@ export default function AdminLayout({
 
   useEffect(() => {
     fetchLiveCounts();
-    const interval = setInterval(fetchLiveCounts, 12000); // refresh every 12 seconds
-    return () => clearInterval(interval);
+    const interval = setInterval(fetchLiveCounts, 15000); // 15 seconds
+    const onVisibilityChange = () => {
+      if (!document.hidden) fetchLiveCounts();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
   }, [fetchLiveCounts]);
 
   const navItems = [
